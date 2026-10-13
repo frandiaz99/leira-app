@@ -46,7 +46,7 @@ export function LoginPage() {
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-10 text-center">
           <img src="/favicon.svg" alt="" className="mx-auto mb-4 size-20" />
-          <h1 className="text-3xl font-bold text-stone-900">Leira</h1>
+          <h1 className="text-3xl font-bold text-stone-900">Plancito</h1>
           <p className="mt-2 text-stone-500">Los lugares a los que queremos ir, y lo que nos parecieron.</p>
         </div>
 

@@ -25,7 +25,7 @@ export function ProfilePage() {
 
   async function shareCode() {
     if (!couple) return
-    const text = `Sumate a nuestra lista de lugares en Leira 💞\nEntrá a ${window.location.origin} y usá el código: ${couple.invite_code}`
+    const text = `Sumate a nuestra lista de lugares en Plancito 💞\nEntrá a ${window.location.origin} y usá el código: ${couple.invite_code}`
     if (navigator.share) {
       await navigator.share({ text }).catch(() => {})
     } else {

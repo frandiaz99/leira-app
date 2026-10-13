@@ -1,4 +1,4 @@
-# Leira 💞
+# Plancito 💞
 
 App para anotar en pareja los lugares a los que quieren ir y, cuando van, dejar cada uno su reseña, puntaje y fotos.
 
@@ -15,7 +15,7 @@ App para anotar en pareja los lugares a los que quieren ir y, cuando van, dejar 
    entrar desde la app instalada en el celu (en iPhone el link abre Safari, no la app):
 
    ```html
-   <h2>Entrar a Leira</h2>
+   <h2>Entrar a Plancito</h2>
    <p>Tu código: <strong>{{ .Token }}</strong></p>
    <p>O tocá este link: <a href="{{ .ConfirmationURL }}">Entrar</a></p>
    ```

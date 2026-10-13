@@ -9,7 +9,7 @@ export function placeIcon(emoji: string, visited: boolean): L.DivIcon {
   if (!icon) {
     icon = L.divIcon({
       className: '',
-      html: `<div class="leira-pin ${visited ? 'leira-pin--visited' : ''}"><span>${emoji}</span></div>`,
+      html: `<div class="plancito-pin ${visited ? 'plancito-pin--visited' : ''}"><span>${emoji}</span></div>`,
       iconSize: [36, 36],
       iconAnchor: [18, 36],
       popupAnchor: [0, -34],

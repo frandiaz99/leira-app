@@ -46,7 +46,7 @@ export function PlacesPage() {
 
   return (
     <div className="pb-6">
-      <PageHeader title={couple?.name ?? 'Leira'} />
+      <PageHeader title={couple?.name ?? 'Plancito'} />
       <div className="space-y-3 px-4">
         <Tabs
           value={tab}

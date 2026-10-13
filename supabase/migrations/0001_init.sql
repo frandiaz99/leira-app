@@ -1,4 +1,4 @@
--- Leira: esquema inicial
+-- Plancito: esquema inicial
 -- Correr en Supabase → SQL Editor (o `npx supabase db push`).
 
 -- ───────────────────────── Tipos ─────────────────────────

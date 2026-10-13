@@ -14,7 +14,7 @@ body {
 }
 
 /* Pin del mapa: gota rotada con el emoji derecho adentro */
-.leira-pin {
+.plancito-pin {
   width: 36px;
   height: 36px;
   border-radius: 50% 50% 50% 0;
@@ -26,12 +26,12 @@ body {
   align-items: center;
   justify-content: center;
 }
-.leira-pin > span {
+.plancito-pin > span {
   transform: rotate(45deg);
   font-size: 17px;
   line-height: 1;
 }
-.leira-pin--visited {
+.plancito-pin--visited {
   background: var(--color-emerald-600);
 }
 

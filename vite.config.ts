@@ -16,8 +16,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Leira',
-        short_name: 'Leira',
+        name: 'Plancito',
+        short_name: 'Plancito',
         description: 'Los lugares a los que queremos ir, y lo que nos parecieron.',
         lang: 'es',
         theme_color: '#e11d48',
