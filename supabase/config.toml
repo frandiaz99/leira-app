@@ -1,0 +1,9 @@
+# Configuración mínima del proyecto Supabase (el resto usa los valores por defecto del CLI).
+project_id = "plancito"
+
+[api]
+schemas = ["public"]
+
+# El link de invitación se abre desde el navegador, sin sesión de Supabase.
+[functions.invite]
+verify_jwt = false

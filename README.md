@@ -1,93 +1,48 @@
-# Plancito 💞
+# Plancito 📍💞
 
-App para anotar en pareja los lugares a los que quieren ir y, cuando van, dejar cada uno su reseña, puntaje y fotos.
+App Android para anotar con tu pareja o tus amigos los lugares a los que quieren ir y, cuando van, dejar cada uno su reseña, puntaje y fotos.
 
-**Stack:** Vite + React 19 + TypeScript · Tailwind v4 · TanStack Query · React Router · Supabase (auth, Postgres, storage) · Leaflet + OpenStreetMap · PWA instalable.
+- **Grupos**: cada usuario puede estar en varios (la pareja, los amigos del club, la familia) y elige cuál ver.
+- **Invitaciones** por WhatsApp o cualquier app (menú de compartir de Android), o con un código.
+- **Login** con Google o con un código que llega al mail (sin contraseñas).
+- Lugares pendientes/visitados, categorías, etiquetas, fecha, mapa (OpenStreetMap), reseñas por persona y fotos.
+- Se actualiza en vivo cuando otro miembro carga algo (Supabase Realtime).
 
-## Puesta en marcha
+**Stack** (el mismo que `gastos`): Kotlin · Jetpack Compose + Material 3 · Navigation Compose · supabase-kt (Auth, Postgrest, Realtime, Storage) · Ktor OkHttp · kotlinx.serialization · Coil 3 · osmdroid · Credential Manager. Backend en Supabase (Postgres + RLS, Storage, Edge Functions). El APK lo compila y publica GitHub Actions.
 
-### 1. Crear el proyecto en Supabase (gratis)
-
-1. Entrá a [supabase.com](https://supabase.com) → **New project**.
-2. **SQL Editor** → pegá todo el contenido de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) → **Run**.
-   Crea las tablas, la seguridad (RLS) y el bucket privado `photos`.
-3. **Authentication → Email Templates → Magic Link**: agregá el código al mail para poder
-   entrar desde la app instalada en el celu (en iPhone el link abre Safari, no la app):
-
-   ```html
-   <h2>Entrar a Plancito</h2>
-   <p>Tu código: <strong>{{ .Token }}</strong></p>
-   <p>O tocá este link: <a href="{{ .ConfirmationURL }}">Entrar</a></p>
-   ```
-
-4. **Authentication → URL Configuration**: en *Site URL* poné `http://localhost:5173` (después la URL de producción) y agregá ambas en *Redirect URLs*.
-
-### 2. Variables de entorno
-
-```bash
-cp .env.example .env.local
-```
-
-Completá `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (Supabase → Project Settings → API).
-
-### 3. Correr
-
-```bash
-npm install
-npm run dev
-```
-
-Abrí http://localhost:5173, entrá con tu mail, creá el espacio y pasale el **código de invitación** (en Perfil) a tu pareja.
-
-## Deploy (Vercel)
-
-1. Subí el repo a GitHub e importalo en [vercel.com](https://vercel.com) (detecta Vite solo).
-2. Cargá las dos variables `VITE_SUPABASE_*` en *Environment Variables*.
-3. Agregá la URL de Vercel en Supabase → Authentication → URL Configuration.
-4. En el celu: abrí la URL → *Compartir → Agregar a pantalla de inicio* (iPhone) o *Instalar app* (Android).
+Puesta en marcha: [docs/setup.md](docs/setup.md).
 
 ## Estructura
 
 ```
-supabase/migrations/   esquema SQL + RLS + storage
-src/
-  lib/                 cliente Supabase, tipos de la DB, geocoding, fechas, categorías
-  components/          layout, guards de rutas, bottom nav y UI base
-  features/
-    auth/              sesión y login por mail (link o código)
-    couple/            perfil, crear/unirse a la pareja
-    places/            lista, detalle, formulario, "¡Fuimos!"
-    map/               mapa general, selector de ubicación, búsqueda de direcciones
-    reviews/           reseña por persona y promedio
-    photos/            subida comprimida, galería, lightbox
-    profile/           nombre, código de invitación, cerrar sesión
+android/app/src/main/java/com/fdm/plancito/
+  PlancitoApp.kt        Application: Repository, Prefs, GroupStore y cambios en vivo (Realtime)
+  data/                 Repository (Supabase), modelos, grupo activo, geocoding (Nominatim),
+                        invitaciones, compresión de fotos, Google Sign-In
+  ui/
+    MainActivity.kt     sesión → invitación pendiente → bienvenida → navegación con barra inferior
+    login/              Google o código por mail
+    groups/             lista, crear/unirse, detalle (miembros, invitar), unirse por link
+    places/             lista (pendientes/visitados), detalle (¡Fuimos!, reseñas, fotos), formulario
+    map/                mapa general y componente OsmMap (también selector de ubicación)
+    reviews/ photos/ profile/
+    common/ theme/      componentes y tokens de color (claro/oscuro)
+supabase/
+  migrations/           esquema, RLS y storage
+  functions/invite/     link de invitación que abre la app (o la descarga del APK)
 ```
-
-Cada feature sigue el mismo patrón: `api.ts` (llamadas a Supabase) → `hooks.ts` (TanStack Query) → componentes.
 
 ### Modelo de datos
 
-- **couples**: el espacio compartido, con `invite_code`. Máximo 2 miembros.
-- **profiles**: uno por usuario (lo crea un trigger), con su `couple_id`.
-- **places**: `status` `wishlist`/`visited`, categoría, etiquetas, fecha planeada, ubicación.
-- **reviews**: una por persona por lugar (`unique(place_id, user_id)`).
-- **photos**: metadata; el archivo vive en el bucket `photos` en `{couple_id}/{place_id}/{uuid}.jpg`.
+- **groups**: nombre, emoji, `invite_code`. **group_members**: (grupo, usuario, `owner`/`member`). Altas y bajas por RPC: `create_group`, `join_group`, `leave_group`, `regenerate_invite`, `invite_preview`.
+- **profiles**: uno por usuario (lo crea un trigger; con Google toma nombre y foto).
+- **places**: del grupo (`group_id`), `wishlist`/`visited`, categoría, etiquetas, fecha planeada, ubicación.
+- **reviews**: una por persona por lugar. **photos**: el archivo vive en el bucket privado `photos` en `{group_id}/{place_id}/{uuid}.jpg`.
 
-La seguridad está en la base (RLS): cada pareja solo ve lo suyo, cada uno edita solo su reseña y borra solo sus fotos.
+La seguridad está en la base (RLS con `my_group_ids()`): cada uno ve solo los grupos donde es miembro, edita solo su reseña y borra solo sus fotos.
 
-### Regenerar los tipos
-
-`src/lib/database.types.ts` está escrito a mano con el formato de Supabase. Si cambiás el esquema:
+## Tests
 
 ```bash
-npx supabase gen types typescript --project-id <tu-project-id> > src/lib/database.types.ts
+cd android && gradle testDebugUnitTest
 ```
-
-## Scripts
-
-| | |
-|---|---|
-| `npm run dev` | servidor de desarrollo |
-| `npm run build` | typecheck + build de producción (con service worker) |
-| `npm run preview` | sirve el build |
-| `npm run lint` | oxlint |

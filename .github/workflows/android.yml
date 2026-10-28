@@ -1,0 +1,60 @@
+# Compila el APK firmado de la app y lo publica como Release del repo
+# (se descarga desde el teléfono en la pestaña Releases).
+# Secrets necesarios: SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID, SIGNING_KEYSTORE_B64, SIGNING_PASSWORD.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # El proyecto no versiona el wrapper de Gradle: se usa la misma versión que declara.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Configuración local y clave de firma
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+        run: |
+          printf 'supabase.url=%s\nsupabase.anonKey=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
+          echo "$SIGNING_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/plancito.jks"
+
+      - name: Tests y APK
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          SIGNING_KEYSTORE: ${{ runner.temp }}/plancito.jks
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          SIGNING_ALIAS: plancito
+        run: gradle --no-daemon testReleaseUnitTest assembleRelease
+
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk="$RUNNER_TEMP/plancito-0.1.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$apk"
+          gh release create "v0.1.${{ github.run_number }}" "$apk" \
+            --title "Plancito 0.1.${{ github.run_number }}" \
+            --notes "$(git log -1 --pretty=%s)"
