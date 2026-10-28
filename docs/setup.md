@@ -21,12 +21,7 @@ Ningún secreto va en el código: la app solo usa la URL y la anon key públicas
    supabase functions deploy invite --no-verify-jwt
    ```
    Opcional: `supabase secrets set APK_URL=<link de descarga>` si el repo de Releases no es público.
-3. **Authentication → Email Templates → Magic Link**: que el mail muestre el código:
-   ```html
-   <h2>Entrar a Plancito</h2>
-   <p>Tu código: <strong>{{ .Token }}</strong></p>
-   ```
-4. **Authentication → Sign In / Providers → Email**: dejá habilitado el registro (los amigos se crean la cuenta al entrar).
+3. **Authentication → Sign In / Providers → Email**: dejá habilitado el registro y **desactivá "Confirm email"**. Las cuentas se crean con mail y contraseña desde la app y no se manda ningún mail.
 
 ### MCP de Supabase en Claude Code
 

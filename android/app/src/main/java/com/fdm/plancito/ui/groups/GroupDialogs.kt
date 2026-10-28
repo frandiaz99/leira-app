@@ -1,5 +1,6 @@
 package com.fdm.plancito.ui.groups
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -111,12 +112,27 @@ fun JoinCodeDialog(error: String?, onJoin: (String) -> Unit, onDismiss: () -> Un
     )
 }
 
-/** Menú de compartir de Android: WhatsApp, Telegram, mail, etc. */
-fun shareInvite(context: Context, group: Group) {
+private fun inviteIntent(group: Group): Intent {
     val link = Invite.link(BuildConfig.SUPABASE_URL, group.inviteCode)
-    val send = Intent(Intent.ACTION_SEND).apply {
+    return Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, Invite.shareText(group.name, link, group.inviteCode))
     }
-    context.startActivity(Intent.createChooser(send, "Invitar a ${group.name}"))
+}
+
+/** Menú de compartir de Android: WhatsApp, Telegram, mail, etc. */
+fun shareInvite(context: Context, group: Group) {
+    context.startActivity(Intent.createChooser(inviteIntent(group), "Invitar a ${group.name}"))
+}
+
+/** Abre WhatsApp (o WhatsApp Business) con el link listo; si no hay ninguno, el menú de compartir. */
+fun shareInviteWhatsApp(context: Context, group: Group) {
+    for (pkg in listOf("com.whatsapp", "com.whatsapp.w4b")) {
+        try {
+            context.startActivity(inviteIntent(group).setPackage(pkg))
+            return
+        } catch (_: ActivityNotFoundException) {
+        }
+    }
+    shareInvite(context, group)
 }

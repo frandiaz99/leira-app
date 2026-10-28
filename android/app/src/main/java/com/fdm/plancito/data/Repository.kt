@@ -3,11 +3,10 @@ package com.fdm.plancito.data
 import com.fdm.plancito.BuildConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
-import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
-import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.exceptions.RestException
@@ -95,16 +94,23 @@ class Repository {
         runCatching { client.auth.refreshCurrentSession() }
     }
 
-    /** Manda un código de 6 dígitos al mail (y crea la cuenta si no existe). */
-    suspend fun sendEmailCode(email: String) {
-        client.auth.signInWith(OTP) {
+    suspend fun signInWithPassword(email: String, password: String) {
+        client.auth.signInWith(Email) {
             this.email = email
-            createUser = true
+            this.password = password
         }
     }
 
-    suspend fun verifyEmailCode(email: String, code: String) {
-        client.auth.verifyEmailOtp(type = OtpType.Email.EMAIL, email = email, token = code)
+    /** Crea la cuenta y entra. Requiere "Confirm email" apagado en Supabase (ver docs/setup.md). */
+    suspend fun signUpWithPassword(email: String, password: String, displayName: String) {
+        client.auth.signUpWith(Email) {
+            this.email = email
+            this.password = password
+            data = buildJsonObject { put("display_name", displayName) }
+        }
+        if (client.auth.currentSessionOrNull() == null) {
+            error("La cuenta se creó pero Supabase pide confirmar el mail. Desactivá \"Confirm email\".")
+        }
     }
 
     /** [rawNonce] es el nonce sin hashear; a Google se le pasa su SHA-256 (ver GoogleSignIn). */

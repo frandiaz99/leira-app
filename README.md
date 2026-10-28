@@ -3,8 +3,8 @@
 App Android para anotar con tu pareja o tus amigos los lugares a los que quieren ir y, cuando van, dejar cada uno su reseña, puntaje y fotos.
 
 - **Grupos**: cada usuario puede estar en varios (la pareja, los amigos del club, la familia) y elige cuál ver.
-- **Invitaciones** por WhatsApp o cualquier app (menú de compartir de Android), o con un código.
-- **Login** con Google o con un código que llega al mail (sin contraseñas).
+- **Invitaciones** con un link por WhatsApp (o cualquier app), o con un código.
+- **Login** con Google o con mail y contraseña.
 - Lugares pendientes/visitados, categorías, etiquetas, fecha, mapa (OpenStreetMap), reseñas por persona y fotos.
 - Se actualiza en vivo cuando otro miembro carga algo (Supabase Realtime).
 
@@ -21,7 +21,7 @@ android/app/src/main/java/com/fdm/plancito/
                         invitaciones, compresión de fotos, Google Sign-In
   ui/
     MainActivity.kt     sesión → invitación pendiente → bienvenida → navegación con barra inferior
-    login/              Google o código por mail
+    login/              Google o mail + contraseña
     groups/             lista, crear/unirse, detalle (miembros, invitar), unirse por link
     places/             lista (pendientes/visitados), detalle (¡Fuimos!, reseñas, fotos), formulario
     map/                mapa general y componente OsmMap (también selector de ubicación)

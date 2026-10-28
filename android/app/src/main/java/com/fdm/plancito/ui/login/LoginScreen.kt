@@ -29,7 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,16 +44,19 @@ import com.fdm.plancito.ui.common.friendlyError
 import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.launch
 
-/** Entrar con Google o con un código que llega al mail (sin contraseñas). */
+private const val MIN_PASSWORD = 6
+
+/** Entrar con Google o con mail y contraseña. */
 @Composable
 fun LoginScreen(pendingInvite: Boolean) {
     val app = PlancitoApp.instance
     val repo = app.repository
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var creating by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf(app.prefs.lastEmail) }
-    var code by remember { mutableStateOf("") }
-    var codeSentTo by remember { mutableStateOf<String?>(null) }
+    var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -64,18 +69,23 @@ fun LoginScreen(pendingInvite: Boolean) {
             } catch (_: GetCredentialCancellationException) {
                 // Cerró el selector de cuentas: no es un error.
             } catch (e: Exception) {
-                error = friendlyError(e)
+                error = authError(e)
             } finally {
                 busy = false
             }
         }
     }
 
-    fun sendCode() = run {
-        val to = email.trim().lowercase()
-        repo.sendEmailCode(to)
-        app.prefs.lastEmail = to
-        codeSentTo = to
+    val canSubmit = email.contains('@') && password.length >= MIN_PASSWORD && (!creating || name.isNotBlank())
+
+    fun submit() {
+        if (!canSubmit) return
+        run {
+            val to = email.trim().lowercase()
+            if (creating) repo.signUpWithPassword(to, password, name.trim())
+            else repo.signInWithPassword(to, password)
+            app.prefs.lastEmail = to
+        }
     }
 
     Column(
@@ -93,54 +103,68 @@ fun LoginScreen(pendingInvite: Boolean) {
             textAlign = TextAlign.Center,
         )
 
-        if (codeSentTo == null) {
-            if (GoogleSignIn.isConfigured) {
-                OutlinedButton(
-                    onClick = { run { GoogleSignIn.signIn(context, repo) } },
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                    shape = MaterialTheme.shapes.small,
-                ) { Text("Continuar con Google", style = MaterialTheme.typography.titleMedium) }
+        if (GoogleSignIn.isConfigured) {
+            OutlinedButton(
+                onClick = { run { GoogleSignIn.signIn(context, repo) } },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                shape = MaterialTheme.shapes.small,
+            ) { Text("Continuar con Google", style = MaterialTheme.typography.titleMedium) }
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HorizontalDivider(Modifier.weight(1f), color = Plancito.colors.border)
-                    Text("o con tu mail", style = MaterialTheme.typography.labelMedium, color = Plancito.colors.textMuted)
-                    HorizontalDivider(Modifier.weight(1f), color = Plancito.colors.border)
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HorizontalDivider(Modifier.weight(1f), color = Plancito.colors.border)
+                Text("o con tu mail", style = MaterialTheme.typography.labelMedium, color = Plancito.colors.textMuted)
+                HorizontalDivider(Modifier.weight(1f), color = Plancito.colors.border)
             }
+        }
+
+        if (creating) {
             OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Mail") },
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Tu nombre") },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { if (email.contains('@')) sendCode() }),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
             )
-            PrimaryButton("Mandarme un código", onClick = { sendCode() }, enabled = email.contains('@'), loading = busy)
-        } else {
-            Text(
-                "Te mandamos un código a $codeSentTo. Puede tardar un minuto; fijate en spam.",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-            OutlinedTextField(
-                value = code,
-                onValueChange = { v -> code = v.filter { it.isDigit() }.take(6) },
-                label = { Text("Código de 6 dígitos") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (code.length == 6) run { repo.verifyEmailCode(codeSentTo!!, code) } }),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            PrimaryButton(
-                "Entrar",
-                onClick = { run { repo.verifyEmailCode(codeSentTo!!, code) } },
-                enabled = code.length == 6,
-                loading = busy,
-            )
-            TextButton(onClick = { codeSentTo = null; code = "" }, enabled = !busy) { Text("Usar otro mail") }
+        }
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Mail") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Contraseña") },
+            supportingText = if (creating) {
+                { Text("Mínimo $MIN_PASSWORD caracteres") }
+            } else null,
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { submit() }),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        PrimaryButton(if (creating) "Crear cuenta" else "Entrar", onClick = { submit() }, enabled = canSubmit, loading = busy)
+        TextButton(onClick = { creating = !creating; error = null }, enabled = !busy) {
+            Text(if (creating) "Ya tengo cuenta" else "No tengo cuenta: crear una")
         }
         ErrorText(error)
+    }
+}
+
+/** Los mensajes de Supabase Auth vienen en inglés. */
+private fun authError(e: Exception): String {
+    val msg = e.message.orEmpty()
+    return when {
+        msg.contains("Invalid login credentials", true) -> "Mail o contraseña incorrectos."
+        msg.contains("already registered", true) || msg.contains("already exists", true) ->
+            "Ya hay una cuenta con ese mail. Entrá con tu contraseña o con Google."
+        msg.contains("Password should", true) || msg.contains("weak", true) -> "La contraseña es muy corta o muy fácil."
+        else -> friendlyError(e)
     }
 }

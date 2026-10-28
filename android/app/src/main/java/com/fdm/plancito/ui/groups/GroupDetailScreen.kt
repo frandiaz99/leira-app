@@ -106,7 +106,7 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
         ) {
             SectionCard(title = "Invitar") {
                 Text(
-                    "Mandales el link por WhatsApp o donde quieras. Si ya tienen la app, se suman con un toque.",
+                    "Mandales el link por WhatsApp. Lo tocan, entran con Google o mail y contraseña, y quedan en el grupo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Plancito.colors.textMuted,
                 )
@@ -114,7 +114,8 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
                     Text("Código", style = MaterialTheme.typography.labelLarge, color = Plancito.colors.textMuted)
                     Text(group.inviteCode, fontFamily = FontFamily.Monospace, fontSize = 22.sp, letterSpacing = 3.sp)
                 }
-                PrimaryButton("Compartir invitación", onClick = { shareInvite(context, group) })
+                PrimaryButton("Mandar por WhatsApp", onClick = { shareInviteWhatsApp(context, group) })
+                OutlinedButton(onClick = { shareInvite(context, group) }, modifier = Modifier.fillMaxWidth()) { Text("Compartir por otra app") }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { copy(context, group.inviteCode) }, modifier = Modifier.weight(1f)) { Text("Copiar código") }
                     if (isOwner) {
