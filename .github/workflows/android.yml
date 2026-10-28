@@ -38,7 +38,8 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
         run: |
-          printf 'supabase.url=%s\nsupabase.anonKey=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > local.properties
+          printf 'supabase.url=%s\nsupabase.anonKey=%s\ngoogle.webClientId=%s\n' \
+            "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$GOOGLE_WEB_CLIENT_ID" > local.properties
           echo "$SIGNING_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/plancito.jks"
 
       - name: Tests y APK
