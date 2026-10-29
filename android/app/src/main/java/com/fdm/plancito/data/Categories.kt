@@ -1,20 +1,36 @@
 package com.fdm.plancito.data
 
-/** El ícono de cada una está en ui/common/Icons.kt. */
-data class PlaceCategory(val value: String, val label: String)
+/**
+ * Categoría de un lugar: una fija ([value] = "restaurante", "bar"…) o una propia del grupo
+ * ([value] = su id en la tabla categories). [iconName] es uno de [CATEGORY_ICONS]; el dibujo
+ * está en ui/common/Icons.kt.
+ */
+data class PlaceCategory(val value: String, val label: String, val iconName: String, val custom: Boolean = false)
 
-/** Mismos valores que el enum place_category de la base. */
+/** Las fijas. "otro" va siempre última. */
 val CATEGORIES = listOf(
-    PlaceCategory("restaurante", "Restaurante"),
-    PlaceCategory("bar", "Bar"),
-    PlaceCategory("cafe", "Café"),
-    PlaceCategory("viaje", "Viaje"),
-    PlaceCategory("paseo", "Paseo"),
-    PlaceCategory("experiencia", "Experiencia"),
-    PlaceCategory("otro", "Otro"),
+    PlaceCategory("restaurante", "Restaurante", "restaurant"),
+    PlaceCategory("bar", "Bar", "bar"),
+    PlaceCategory("cafe", "Café", "cafe"),
+    PlaceCategory("viaje", "Viaje", "flight"),
+    PlaceCategory("paseo", "Paseo", "park"),
+    PlaceCategory("experiencia", "Experiencia", "ticket"),
+    PlaceCategory("otro", "Otro", "place"),
 )
 
-fun categoryInfo(value: String): PlaceCategory = CATEGORIES.firstOrNull { it.value == value } ?: CATEGORIES.last()
+/** Íconos para elegir al crear una categoría propia. */
+val CATEGORY_ICONS = listOf(
+    "place", "restaurant", "pizza", "icecream", "cafe", "bar", "nightlife", "music",
+    "theater", "movie", "museum", "library", "shopping", "park", "beach", "hiking",
+    "sports", "fitness", "flight", "hotel", "ticket", "pets", "star",
+)
+
+/** Fijas (sin "otro") + las propias del grupo + "otro". */
+fun allCategories(custom: List<PlaceCategory>): List<PlaceCategory> = CATEGORIES.dropLast(1) + custom + CATEGORIES.last()
+
+/** La categoría de un lugar; si no existe (p. ej. la borraron), "otro". */
+fun categoryInfo(value: String, custom: List<PlaceCategory> = emptyList()): PlaceCategory =
+    CATEGORIES.firstOrNull { it.value == value } ?: custom.firstOrNull { it.value == value } ?: CATEGORIES.last()
 
 /** Iniciales de un grupo para su avatar: "Con Sofi" → "CS", "Familia" → "FA". */
 fun groupInitials(name: String): String {

@@ -5,15 +5,32 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BeachAccess
 import androidx.compose.material.icons.outlined.ConfirmationNumber
+import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Flight
+import androidx.compose.material.icons.outlined.Hiking
+import androidx.compose.material.icons.outlined.Hotel
+import androidx.compose.material.icons.outlined.Icecream
 import androidx.compose.material.icons.outlined.LocalBar
 import androidx.compose.material.icons.outlined.LocalCafe
+import androidx.compose.material.icons.outlined.LocalLibrary
+import androidx.compose.material.icons.outlined.LocalPizza
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.Museum
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Nightlife
 import androidx.compose.material.icons.outlined.Park
+import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.SportsSoccer
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,21 +40,44 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fdm.plancito.PlancitoApp
 import com.fdm.plancito.data.PlaceCategory
 import com.fdm.plancito.data.groupColorIndex
 import com.fdm.plancito.data.groupInitials
 
-/** Ícono de cada categoría: en la lista, los filtros, el formulario y los pines del mapa. */
-val PlaceCategory.icon: ImageVector
-    get() = when (value) {
-        "restaurante" -> Icons.Outlined.Restaurant
-        "bar" -> Icons.Outlined.LocalBar
-        "cafe" -> Icons.Outlined.LocalCafe
-        "viaje" -> Icons.Outlined.Flight
-        "paseo" -> Icons.Outlined.Park
-        "experiencia" -> Icons.Outlined.ConfirmationNumber
-        else -> Icons.Outlined.Place
-    }
+/** Dibujo de cada nombre de [com.fdm.plancito.data.CATEGORY_ICONS]. */
+fun categoryIcon(name: String): ImageVector = when (name) {
+    "restaurant" -> Icons.Outlined.Restaurant
+    "pizza" -> Icons.Outlined.LocalPizza
+    "icecream" -> Icons.Outlined.Icecream
+    "cafe" -> Icons.Outlined.LocalCafe
+    "bar" -> Icons.Outlined.LocalBar
+    "nightlife" -> Icons.Outlined.Nightlife
+    "music" -> Icons.Outlined.MusicNote
+    "theater" -> Icons.Outlined.TheaterComedy
+    "movie" -> Icons.Outlined.Movie
+    "museum" -> Icons.Outlined.Museum
+    "library" -> Icons.Outlined.LocalLibrary
+    "shopping" -> Icons.Outlined.ShoppingBag
+    "park" -> Icons.Outlined.Park
+    "beach" -> Icons.Outlined.BeachAccess
+    "hiking" -> Icons.Outlined.Hiking
+    "sports" -> Icons.Outlined.SportsSoccer
+    "fitness" -> Icons.Outlined.FitnessCenter
+    "flight" -> Icons.Outlined.Flight
+    "hotel" -> Icons.Outlined.Hotel
+    "ticket" -> Icons.Outlined.ConfirmationNumber
+    "pets" -> Icons.Outlined.Pets
+    "star" -> Icons.Outlined.StarOutline
+    else -> Icons.Outlined.Place
+}
+
+/** Ícono de la categoría: en la lista, los filtros, el formulario y los pines del mapa. */
+val PlaceCategory.icon: ImageVector get() = categoryIcon(iconName)
+
+/** Categorías del grupo activo (fijas + propias). */
+@Composable
+fun rememberCategories(): List<PlaceCategory> = PlancitoApp.instance.categories.all.collectAsState().value
 
 /** Fondos del avatar de grupo; con texto blanco pasan contraste en claro y oscuro. */
 private val GROUP_COLORS = listOf(

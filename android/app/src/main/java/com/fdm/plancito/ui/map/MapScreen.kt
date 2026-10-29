@@ -35,6 +35,7 @@ import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.ui.common.Segment
 import com.fdm.plancito.ui.common.SegmentedControl
 import com.fdm.plancito.ui.common.icon
+import com.fdm.plancito.ui.common.rememberCategories
 import com.fdm.plancito.ui.places.GroupSwitcher
 import com.fdm.plancito.ui.places.PlacesViewModel
 import com.fdm.plancito.ui.theme.Plancito
@@ -50,6 +51,7 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
     var show by rememberSaveable { mutableStateOf(Show.All) }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var refit by rememberSaveable { mutableStateOf(0) }
+    val categories = rememberCategories()
 
     val located = places.orEmpty().filter {
         it.hasLocation && when (show) {
@@ -63,7 +65,7 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize()) {
-        OsmMap(pins = pins, fitAll = true, refitKey = refit, onPinClick = { selected = it }, onTap = { _, _ -> selected = null }, modifier = Modifier.fillMaxSize())
+        PlaceMap(pins = pins, fitAll = true, refitKey = refit, onPinClick = { selected = it }, onTap = { _, _ -> selected = null }, modifier = Modifier.fillMaxSize())
 
         Column(
             Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp),
@@ -97,7 +99,7 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
         }
 
         located.firstOrNull { it.id == selected }?.let { p ->
-            val cat = categoryInfo(p.category)
+            val cat = categoryInfo(p.category, categories)
             Row(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp).clip(RoundedCornerShape(16.dp))
                     .background(t.surface).clickable { onOpen(p.id) }.padding(16.dp),

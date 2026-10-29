@@ -1,6 +1,6 @@
 # Compila el APK firmado de la app y lo publica como Release del repo
 # (se descarga desde el teléfono en la pestaña Releases).
-# Secrets necesarios: SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID, SIGNING_KEYSTORE_B64, SIGNING_PASSWORD.
+# Secrets necesarios: SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID, GOOGLE_MAPS_API_KEY, SIGNING_KEYSTORE_B64, SIGNING_PASSWORD.
 name: Android APK
 
 on:
@@ -36,10 +36,11 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
         run: |
-          printf 'supabase.url=%s\nsupabase.anonKey=%s\ngoogle.webClientId=%s\n' \
-            "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$GOOGLE_WEB_CLIENT_ID" > local.properties
+          printf 'supabase.url=%s\nsupabase.anonKey=%s\ngoogle.webClientId=%s\ngoogle.mapsApiKey=%s\n' \
+            "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$GOOGLE_WEB_CLIENT_ID" "$GOOGLE_MAPS_API_KEY" > local.properties
           echo "$SIGNING_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/plancito.jks"
 
       - name: Tests y APK

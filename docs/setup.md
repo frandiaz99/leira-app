@@ -11,7 +11,7 @@ Ningún secreto va en el código: la app solo usa la URL y la anon key públicas
 
 ## 1. Supabase (proyecto `pyxlvumbetsoxrqjaxec`)
 
-1. Aplicá las migraciones de `supabase/migrations/` en orden. `0001_init.sql` es el esquema original de la PWA (si ya se corrió en el SQL Editor, saltealo); `20261028000001_groups.sql` pasa de "pareja" a grupos y migra los datos existentes.
+1. Aplicá las migraciones de `supabase/migrations/` en orden. `0001_init.sql` es el esquema original de la PWA (si ya se corrió en el SQL Editor, saltealo); `20261028000001_groups.sql` pasa de "pareja" a grupos y migra los datos existentes; `20261029000001_custom_categories.sql` agrega las categorías propias de cada grupo.
    ```bash
    supabase link --project-ref pyxlvumbetsoxrqjaxec
    supabase db push
@@ -37,7 +37,7 @@ Ya está en `.mcp.json`. Al abrir Claude Code en esta carpeta, aprobá el servid
      keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
      ```
 2. Supabase → **Authentication → Providers → Google**: habilitalo y pegá el Client ID y el secret del cliente *Web*.
-3. El Client ID *Web* va en `google.webClientId` (paso 3). Si queda vacío, la app oculta "Continuar con Google".
+3. El Client ID *Web* va en `google.webClientId` (paso 4). Si queda vacío, la app oculta "Continuar con Google".
 
 **Si "Continuar con Google" no entra**, la app muestra la causa debajo del formulario (y en `adb logcat -s Login`):
 
@@ -47,7 +47,15 @@ Ya está en `.mcp.json`. Al abrir Claude Code en esta carpeta, aprobá el servid
 | "Google no está habilitado en Supabase" | Habilitar Google en Supabase → Authentication → Providers. |
 | "Supabase no acepta este Client ID" | En ese provider, el campo *Client IDs* tiene que tener el Client ID **Web** (el mismo de `google.webClientId`). |
 
-## 3. App
+## 3. Google Maps
+
+1. En [Google Cloud Console](https://console.cloud.google.com/), en el mismo proyecto: *APIs y servicios → Biblioteca* → **Maps SDK for Android** → *Habilitar*. Google Maps pide tener una cuenta de facturación asociada al proyecto, aunque los mapas en la app de Android no tienen costo.
+2. *APIs y servicios → Credenciales → Crear credenciales → Clave de API*. Editala:
+   - *Restricciones de aplicación*: **Apps de Android** → agregar `com.fdm.plancito` con el SHA-1 del keystore de release (el mismo del client OAuth Android; y el de debug si probás desde Android Studio).
+   - *Restricciones de API*: **Maps SDK for Android**.
+3. La clave va en `google.mapsApiKey` (paso 4) y en el secret `GOOGLE_MAPS_API_KEY` de GitHub. Si falta, la app muestra un aviso en lugar del mapa.
+
+## 4. App
 
 `android/local.properties` (no se versiona):
 
@@ -55,6 +63,7 @@ Ya está en `.mcp.json`. Al abrir Claude Code en esta carpeta, aprobá el servid
 supabase.url=https://pyxlvumbetsoxrqjaxec.supabase.co
 supabase.anonKey=eyJ...
 google.webClientId=xxxx.apps.googleusercontent.com
+google.mapsApiKey=AIza...
 ```
 
 Abrí `android/` en Android Studio y corré la app.
@@ -69,6 +78,6 @@ keytool -genkeypair -v -keystore android/signing/plancito.jks -alias plancito -k
 printf 'storeFile=plancito.jks\npassword=<la clave>\nalias=plancito\n' > android/signing/signing.properties
 ```
 
-Secrets del repo en GitHub (*Settings → Secrets → Actions*): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID`, `SIGNING_PASSWORD` y `SIGNING_KEYSTORE_B64` (`base64 -w0 android/signing/plancito.jks`).
+Secrets del repo en GitHub (*Settings → Secrets → Actions*): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_MAPS_API_KEY`, `SIGNING_PASSWORD` y `SIGNING_KEYSTORE_B64` (`base64 -w0 android/signing/plancito.jks`).
 
 Cada push a `main` que toque `android/` corre los tests y publica el APK en *Releases*.

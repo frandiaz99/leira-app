@@ -11,6 +11,7 @@ plugins {
 //   supabase.url=https://<ref>.supabase.co
 //   supabase.anonKey=eyJ...
 //   google.webClientId=<id>.apps.googleusercontent.com   (OAuth client "Web" de Google Cloud)
+//   google.mapsApiKey=AIza...                              (clave de Maps SDK for Android)
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
@@ -31,6 +32,9 @@ android {
         buildConfigField("String", "SUPABASE_URL", "\"${localProps.getProperty("supabase.url", "")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProps.getProperty("supabase.anonKey", "")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProps.getProperty("google.webClientId", "")}\"")
+        val mapsKey = localProps.getProperty("google.mapsApiKey", "")
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsKey\"")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
     }
 
     // Firma del release: android/signing/ en local, o las variables SIGNING_* en GitHub Actions.
@@ -99,7 +103,7 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
-    implementation(libs.osmdroid)
+    implementation(libs.maps.compose)
     implementation(libs.credentials)
     implementation(libs.credentials.play)
     implementation(libs.googleid)

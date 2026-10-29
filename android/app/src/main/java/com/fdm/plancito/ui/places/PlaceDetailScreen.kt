@@ -83,13 +83,14 @@ import com.fdm.plancito.ui.common.SectionCard
 import com.fdm.plancito.ui.common.StarRating
 import com.fdm.plancito.ui.common.friendlyError
 import com.fdm.plancito.ui.common.icon
+import com.fdm.plancito.ui.common.rememberCategories
 import com.fdm.plancito.ui.map.MapPin
-import com.fdm.plancito.ui.map.OsmMap
+import com.fdm.plancito.ui.map.PlaceMap
 import com.fdm.plancito.ui.photos.PhotoViewer
 import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import org.osmdroid.util.GeoPoint
+import com.google.android.gms.maps.model.LatLng
 import kotlin.math.roundToInt
 
 class PlaceDetailViewModel(private val placeId: String) : BaseViewModel() {
@@ -214,7 +215,7 @@ fun PlaceDetailScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit, o
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Header(p: Place) {
-    val cat = categoryInfo(p.category)
+    val cat = categoryInfo(p.category, rememberCategories())
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(cat.icon, null, tint = Plancito.colors.primaryText, modifier = Modifier.size(18.dp))
@@ -321,12 +322,14 @@ private fun InfoRow(icon: ImageVector, content: @Composable () -> Unit) {
 @Composable
 private fun MiniMap(p: Place) {
     val context = LocalContext.current
-    val point = GeoPoint(p.lat!!, p.lng!!)
-    Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).clickable { open(context, Geocode.mapsUrl(p)) }) {
-        OsmMap(
+    val point = LatLng(p.lat!!, p.lng!!)
+    Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp))) {
+        PlaceMap(
             pins = listOf(MapPin(p.id, point.latitude, point.longitude, p.category, if (p.visited) Plancito.colors.visited else Plancito.colors.primary, p.name)),
             focus = point,
             interactive = false,
+            // Tocar la vista previa abre el lugar en la app de mapas.
+            onTap = { _, _ -> open(context, Geocode.mapsUrl(p)) },
             modifier = Modifier.fillMaxSize(),
         )
     }

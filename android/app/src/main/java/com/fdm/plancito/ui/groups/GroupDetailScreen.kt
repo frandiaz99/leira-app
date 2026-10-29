@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -30,7 +35,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fdm.plancito.PlancitoApp
 import com.fdm.plancito.data.Member
+import com.fdm.plancito.data.PlaceCategory
 import com.fdm.plancito.ui.common.Avatar
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.ConfirmDialog
@@ -40,11 +47,13 @@ import com.fdm.plancito.ui.common.Pill
 import com.fdm.plancito.ui.common.PrimaryButton
 import com.fdm.plancito.ui.common.ScreenHeader
 import com.fdm.plancito.ui.common.SectionCard
+import com.fdm.plancito.ui.common.icon
 import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class GroupDetailViewModel(private val groupId: String) : BaseViewModel() {
     val members = MutableStateFlow<List<Member>>(emptyList())
+    val categories = MutableStateFlow<List<PlaceCategory>>(emptyList())
     val left = MutableStateFlow(false)
 
     init {
@@ -54,6 +63,14 @@ class GroupDetailViewModel(private val groupId: String) : BaseViewModel() {
 
     override suspend fun load() {
         members.value = repo.members(groupId)
+        // Si todavía no se aplicó la migración de categorías, la sección queda vacía.
+        categories.value = runCatching { repo.categories(groupId).map { it.toPlaceCategory() } }.getOrDefault(emptyList())
+    }
+
+    fun deleteCategory(category: PlaceCategory) = launchSafe {
+        repo.deleteCategory(category.value)
+        categories.value = categories.value - category
+        PlancitoApp.instance.categories.refresh()
     }
 
     fun update(name: String) = launchSafe {
@@ -81,6 +98,8 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
     val loading by vm.loading.collectAsState()
     val error by vm.error.collectAsState()
     val left by vm.left.collectAsState()
+    val categories by vm.categories.collectAsState()
+    var deletingCategory by remember { mutableStateOf<PlaceCategory?>(null) }
     val context = LocalContext.current
     var editing by remember { mutableStateOf(false) }
     var confirmLeave by remember { mutableStateOf(false) }
@@ -138,6 +157,25 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
                 }
             }
 
+            SectionCard(title = "Categorías propias") {
+                if (categories.isEmpty()) {
+                    Text(
+                        "Todavía no hay. Se crean desde el formulario de un lugar, con \"Nueva\".",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Plancito.colors.textMuted,
+                    )
+                }
+                categories.forEach { c ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(c.icon, null, tint = Plancito.colors.primaryText, modifier = Modifier.size(22.dp))
+                        Text(c.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { deletingCategory = c }) {
+                            Icon(Icons.Outlined.Delete, "Borrar ${c.label}", tint = Plancito.colors.textMuted)
+                        }
+                    }
+                }
+            }
+
             ErrorText(error)
             OutlinedButton(onClick = { confirmLeave = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Salir del grupo", color = Plancito.colors.danger)
@@ -161,6 +199,15 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
                 danger = false,
                 onConfirm = vm::regenerateCode,
                 onDismiss = { confirmNewCode = false },
+            )
+        }
+        deletingCategory?.let { c ->
+            ConfirmDialog(
+                title = "¿Borrar \"${c.label}\"?",
+                text = "Los lugares que la usan pasan a \"Otro\".",
+                confirmLabel = "Borrar",
+                onConfirm = { vm.deleteCategory(c); deletingCategory = null },
+                onDismiss = { deletingCategory = null },
             )
         }
         if (confirmLeave) {

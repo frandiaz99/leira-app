@@ -57,7 +57,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.fdm.plancito.PlancitoApp
-import com.fdm.plancito.data.CATEGORIES
 import com.fdm.plancito.data.Dates
 import com.fdm.plancito.data.Place
 import com.fdm.plancito.data.categoryInfo
@@ -66,6 +65,7 @@ import com.fdm.plancito.ui.common.EmptyState
 import com.fdm.plancito.ui.common.ErrorText
 import com.fdm.plancito.ui.common.GroupAvatar
 import com.fdm.plancito.ui.common.icon
+import com.fdm.plancito.ui.common.rememberCategories
 import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.Pill
 import com.fdm.plancito.ui.common.Segment
@@ -124,7 +124,7 @@ fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: ()
     var searching by rememberSaveable { mutableStateOf(false) }
 
     val all = places.orEmpty()
-    val usedCategories = CATEGORIES.filter { c -> all.any { it.category == c.value } }
+    val usedCategories = rememberCategories().filter { c -> all.any { it.category == c.value } }
     val allTags = all.flatMap { it.tags }.distinct().sorted()
     val q = search.trim().lowercase()
     val filtered = sortPlaces(
@@ -249,7 +249,7 @@ fun GroupSwitcher(modifier: Modifier = Modifier, onManageGroups: () -> Unit) {
 @Composable
 private fun PlaceCard(place: Place, coverUrl: String?, onClick: () -> Unit) {
     val t = Plancito.colors
-    val cat = categoryInfo(place.category)
+    val cat = categoryInfo(place.category, rememberCategories())
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(t.surface).clickable(onClick = onClick).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),

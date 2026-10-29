@@ -196,6 +196,27 @@ class Repository {
         put("link", link)
     }
 
+    // ---------------------------------------------------------------- Categorías propias
+
+    suspend fun categories(groupId: String): List<Category> =
+        client.from("categories").select {
+            filter { eq("group_id", groupId) }
+            order("label", Order.ASCENDING)
+        }.decodeList()
+
+    suspend fun createCategory(groupId: String, label: String, icon: String): Category =
+        client.from("categories").insert(buildJsonObject {
+            put("group_id", groupId)
+            put("label", label)
+            put("icon", icon)
+        }) { select() }.decodeSingle()
+
+    suspend fun deleteCategory(id: String) {
+        client.from("categories").delete { filter { eq("id", id) } }
+    }
+
+    // ---------------------------------------------------------------- Lugares (alta y cambios)
+
     suspend fun createPlace(groupId: String, input: PlaceInput): Place {
         val row = buildJsonObject {
             input.toJson().forEach { (k, v) -> put(k, v) }

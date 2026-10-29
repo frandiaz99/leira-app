@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material3.FilterChip
@@ -47,7 +48,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fdm.plancito.data.CATEGORIES
 import com.fdm.plancito.data.Dates
 import com.fdm.plancito.data.GeoResult
 import com.fdm.plancito.data.Geocode
@@ -61,13 +61,14 @@ import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.PrimaryButton
 import com.fdm.plancito.ui.common.ScreenHeader
 import com.fdm.plancito.ui.common.icon
+import com.fdm.plancito.ui.common.rememberCategories
 import com.fdm.plancito.ui.map.MapPin
-import com.fdm.plancito.ui.map.OsmMap
+import com.fdm.plancito.ui.map.PlaceMap
 import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import org.osmdroid.util.GeoPoint
+import com.google.android.gms.maps.model.LatLng
 
 class PlaceFormViewModel(private val placeId: String?) : BaseViewModel() {
     /** El lugar a editar; null mientras carga o si es nuevo. */
@@ -177,8 +178,9 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
         )
 
         Label("Categoría")
+        var creatingCategory by remember { mutableStateOf(false) }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 4) {
-            CATEGORIES.forEach { c ->
+            rememberCategories().forEach { c ->
                 val on = form.category == c.value
                 Column(
                     Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
@@ -189,9 +191,32 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(c.icon, null, tint = if (on) t.primaryText else t.text, modifier = Modifier.size(22.dp))
-                    Text(c.label, style = MaterialTheme.typography.labelSmall, color = if (on) t.primaryText else t.textMuted, maxLines = 1)
+                    Text(
+                        c.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (on) t.primaryText else t.textMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
                 }
             }
+            Column(
+                Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, t.border, RoundedCornerShape(12.dp))
+                    .clickable { creatingCategory = true }
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(Icons.Filled.Add, null, tint = t.primaryText, modifier = Modifier.size(22.dp))
+                Text("Nueva", style = MaterialTheme.typography.labelSmall, color = t.primaryText, maxLines = 1)
+            }
+        }
+        if (creatingCategory) {
+            NewCategoryDialog(
+                onCreated = { c -> form.category = c.value; creatingCategory = false },
+                onDismiss = { creatingCategory = false },
+            )
         }
 
         Label("Ubicación")
@@ -200,8 +225,8 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
             form.lng = r.lng
             form.address = r.label
         }
-        val point = if (form.lat != null && form.lng != null) GeoPoint(form.lat!!, form.lng!!) else null
-        OsmMap(
+        val point = if (form.lat != null && form.lng != null) LatLng(form.lat!!, form.lng!!) else null
+        PlaceMap(
             pins = point?.let { listOf(MapPin("new", it.latitude, it.longitude, form.category, t.primary, form.name)) }.orEmpty(),
             focus = point,
             onTap = { la, lo ->

@@ -2,6 +2,10 @@ package com.fdm.plancito
 
 import com.fdm.plancito.data.Dates
 import com.fdm.plancito.data.averageRating
+import com.fdm.plancito.data.CATEGORIES
+import com.fdm.plancito.data.CATEGORY_ICONS
+import com.fdm.plancito.data.PlaceCategory
+import com.fdm.plancito.data.allCategories
 import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.data.groupColorIndex
 import com.fdm.plancito.data.groupInitials
@@ -44,6 +48,19 @@ class DatesAndRatingTest {
     fun unknownCategoryFallsBackToOtro() {
         assertEquals("otro", categoryInfo("cualquiera").value)
         assertEquals("Bar", categoryInfo("bar").label)
+    }
+
+    @Test
+    fun customCategories() {
+        val heladeria = PlaceCategory("7d2c1f3a-0000-4000-8000-000000000000", "Heladería", "icecream", custom = true)
+        assertEquals("Heladería", categoryInfo(heladeria.value, listOf(heladeria)).label)
+        // Una categoría borrada (o de otro grupo) cae en "otro".
+        assertEquals("otro", categoryInfo(heladeria.value).value)
+        // Las propias van antes de "otro", que queda última.
+        val all = allCategories(listOf(heladeria))
+        assertEquals("otro", all.last().value)
+        assertEquals(heladeria, all[all.size - 2])
+        assert(CATEGORIES.all { it.iconName in CATEGORY_ICONS })
     }
 
     @Test

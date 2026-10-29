@@ -35,6 +35,17 @@ data class Member(
     @SerialName("profiles") val profile: Profile,
 )
 
+/** Categoría propia de un grupo (tabla categories). */
+@Serializable
+data class Category(
+    val id: String,
+    @SerialName("group_id") val groupId: String,
+    val label: String,
+    val icon: String = "place",
+) {
+    fun toPlaceCategory() = PlaceCategory(id, label, icon, custom = true)
+}
+
 /** Lo que muestra la pantalla "Unirte a …" antes de aceptar (RPC invite_preview). */
 @Serializable
 data class InvitePreview(
