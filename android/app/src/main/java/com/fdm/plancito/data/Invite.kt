@@ -29,5 +29,5 @@ object Invite {
     fun link(supabaseUrl: String, code: String): String = "${supabaseUrl.trimEnd('/')}/functions/v1/invite?c=$code"
 
     fun shareText(groupName: String, link: String, code: String): String =
-        "¡Sumate a \"$groupName\" en Plancito para anotar los lugares a los que vamos! 📍\n$link\n\nSi no abre, entrá a la app y usá el código $code"
+        "¡Sumate a \"$groupName\" en Plancito para anotar los lugares a los que vamos!\n$link\n\nSi no abre, entrá a la app y usá el código $code"
 }

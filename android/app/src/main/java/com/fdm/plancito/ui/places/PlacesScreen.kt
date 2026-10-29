@@ -23,6 +23,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Celebration
+import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -59,6 +64,8 @@ import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.EmptyState
 import com.fdm.plancito.ui.common.ErrorText
+import com.fdm.plancito.ui.common.GroupAvatar
+import com.fdm.plancito.ui.common.icon
 import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.Pill
 import com.fdm.plancito.ui.common.Segment
@@ -172,7 +179,8 @@ fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: ()
                                     FilterChip(
                                         selected = category == c.value,
                                         onClick = { category = if (category == c.value) null else c.value },
-                                        label = { Text("${c.emoji} ${c.label}") },
+                                        label = { Text(c.label) },
+                                        leadingIcon = { Icon(c.icon, null, modifier = Modifier.size(18.dp)) },
                                     )
                                 }
                                 allTags.forEach { t ->
@@ -200,7 +208,7 @@ fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: ()
     }
 }
 
-/** "💞 Con Sofi ▾": cambia el grupo activo. */
+/** Avatar + "Con Sofi" + flecha: cambia el grupo activo. */
 @Composable
 fun GroupSwitcher(modifier: Modifier = Modifier, onManageGroups: () -> Unit) {
     val store = PlancitoApp.instance.groups
@@ -213,8 +221,9 @@ fun GroupSwitcher(modifier: Modifier = Modifier, onManageGroups: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            active?.let { GroupAvatar(it.id, it.name) }
             Text(
-                active?.let { "${it.emoji} ${it.name}" } ?: "Plancito",
+                active?.name ?: "Plancito",
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -225,7 +234,8 @@ fun GroupSwitcher(modifier: Modifier = Modifier, onManageGroups: () -> Unit) {
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             memberships.orEmpty().forEach { m ->
                 DropdownMenuItem(
-                    text = { Text("${m.group.emoji} ${m.group.name}") },
+                    text = { Text(m.group.name) },
+                    leadingIcon = { GroupAvatar(m.group.id, m.group.name, size = 28.dp) },
                     trailingIcon = { if (m.groupId == active?.id) Icon(Icons.Filled.Check, null) },
                     onClick = { store.select(m.groupId); open = false },
                 )
@@ -249,13 +259,13 @@ private fun PlaceCard(place: Place, coverUrl: String?, onClick: () -> Unit) {
             if (coverUrl != null) {
                 AsyncImage(coverUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(72.dp))
             } else {
-                Text(cat.emoji, fontSize = 30.sp)
+                Icon(cat.icon, null, tint = t.primaryText, modifier = Modifier.size(30.dp))
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(place.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "${cat.emoji} ${cat.label}" + (place.address?.let { " · ${it.substringBefore(',')}" } ?: ""),
+                cat.label + (place.address?.let { " · ${it.substringBefore(',')}" } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = t.textMuted,
                 maxLines = 1,
@@ -272,11 +282,14 @@ private fun PlaceCard(place: Place, coverUrl: String?, onClick: () -> Unit) {
                     style = MaterialTheme.typography.labelMedium,
                     color = t.visitedText,
                 )
-                place.plannedDate != null -> Text(
-                    "📅 ${Dates.format(place.plannedDate)} (${Dates.relativeDays(place.plannedDate)})",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = t.primaryText,
-                )
+                place.plannedDate != null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Outlined.Event, null, tint = t.primaryText, modifier = Modifier.size(14.dp))
+                    Text(
+                        "${Dates.format(place.plannedDate)} (${Dates.relativeDays(place.plannedDate)})",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = t.primaryText,
+                    )
+                }
             }
             if (place.tags.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { place.tags.take(3).forEach { Pill("#$it") } }
@@ -288,9 +301,9 @@ private fun PlaceCard(place: Place, coverUrl: String?, onClick: () -> Unit) {
 @Composable
 private fun Empty(visited: Boolean, hasAny: Boolean, filtering: Boolean, onAdd: () -> Unit) {
     when {
-        filtering -> EmptyState("🔍", "Nada con ese filtro")
-        visited -> EmptyState("🗺️", "Todavía no fueron a ningún lado", "Cuando vayan a un lugar, entren y toquen “¡Fuimos!”.")
-        else -> EmptyState("✨", if (hasAny) "¡Fueron a todos!" else "¿A dónde quieren ir?") {
+        filtering -> EmptyState(Icons.Outlined.SearchOff, "Nada con ese filtro")
+        visited -> EmptyState(Icons.Outlined.Map, "Todavía no fueron a ningún lado", "Cuando vayan a un lugar, entren y toquen “¡Fuimos!”.")
+        else -> EmptyState(if (hasAny) Icons.Outlined.Celebration else Icons.Outlined.Place, if (hasAny) "¡Fueron a todos!" else "¿A dónde quieren ir?") {
             TextButton(onClick = onAdd) { Text(if (hasAny) "Agregar otro lugar" else "Agregar el primer lugar") }
         }
     }

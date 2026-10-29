@@ -115,7 +115,7 @@ fun ReviewScreen(placeId: String, onDone: () -> Unit) {
             )
             Text("¿Volverías?", style = MaterialTheme.typography.titleSmall)
             SegmentedControl(
-                segments = listOf(Segment(Return.Yes, "🔁 Sí"), Segment(Return.No, "🚫 No"), Segment(Return.DontKnow, "No sé")),
+                segments = listOf(Segment(Return.Yes, "Sí"), Segment(Return.No, "No"), Segment(Return.DontKnow, "No sé")),
                 selected = wouldReturn,
                 onSelect = { wouldReturn = it },
             )

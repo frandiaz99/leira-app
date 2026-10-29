@@ -14,7 +14,6 @@ data class Profile(
 data class Group(
     val id: String,
     val name: String,
-    val emoji: String = "💞",
     @SerialName("invite_code") val inviteCode: String,
     @SerialName("created_by") val createdBy: String? = null,
 )
@@ -41,7 +40,6 @@ data class Member(
 data class InvitePreview(
     val id: String,
     val name: String,
-    val emoji: String,
     val members: Int,
     @SerialName("already_member") val alreadyMember: Boolean,
 )

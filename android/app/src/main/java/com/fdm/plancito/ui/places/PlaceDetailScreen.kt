@@ -24,7 +24,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.LocationOff
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -68,6 +82,7 @@ import com.fdm.plancito.ui.common.ScreenHeader
 import com.fdm.plancito.ui.common.SectionCard
 import com.fdm.plancito.ui.common.StarRating
 import com.fdm.plancito.ui.common.friendlyError
+import com.fdm.plancito.ui.common.icon
 import com.fdm.plancito.ui.map.MapPin
 import com.fdm.plancito.ui.map.OsmMap
 import com.fdm.plancito.ui.photos.PhotoViewer
@@ -157,7 +172,7 @@ fun PlaceDetailScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit, o
         LoadingBar(loading && place == null)
         val p = place
         if (p == null) {
-            if (notFound) EmptyState("🤷", "Este lugar no existe", "Puede que alguien del grupo lo haya borrado.")
+            if (notFound) EmptyState(Icons.Outlined.LocationOff, "Este lugar no existe", "Puede que alguien del grupo lo haya borrado.")
             ErrorText(error, Modifier.padding(16.dp))
             return@Column
         }
@@ -201,7 +216,10 @@ fun PlaceDetailScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit, o
 private fun Header(p: Place) {
     val cat = categoryInfo(p.category)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("${cat.emoji} ${cat.label}", style = MaterialTheme.typography.labelLarge, color = Plancito.colors.primaryText)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(cat.icon, null, tint = Plancito.colors.primaryText, modifier = Modifier.size(18.dp))
+            Text(cat.label, style = MaterialTheme.typography.labelLarge, color = Plancito.colors.primaryText)
+        }
         Text(p.name, style = MaterialTheme.typography.headlineMedium)
         if (p.tags.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -221,8 +239,9 @@ private fun VisitedControl(p: Place, onSet: (String?) -> Unit) {
             Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(t.visitedTint).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(Icons.Filled.Check, null, tint = t.visitedText, modifier = Modifier.padding(end = 8.dp).size(20.dp))
             Text(
-                "✅ Fueron" + (p.visitedAt?.let { " el ${Dates.format(it)}" } ?: ""),
+                "Fueron" + (p.visitedAt?.let { " el ${Dates.format(it)}" } ?: ""),
                 style = MaterialTheme.typography.titleSmall,
                 color = t.visitedText,
                 modifier = Modifier.weight(1f),
@@ -236,7 +255,7 @@ private fun VisitedControl(p: Place, onSet: (String?) -> Unit) {
             )
         }
     } else {
-        PrimaryButton("🎉 ¡Fuimos!", onClick = { picking = true })
+        PrimaryButton("¡Fuimos!", onClick = { picking = true }, icon = Icons.Filled.Check)
     }
     if (picking) DateDialog(initial = null, onlyPast = true, onPick = onSet, onDismiss = { picking = false })
     if (confirmUnset) {
@@ -257,7 +276,7 @@ private fun Info(p: Place, addedBy: String?) {
     val t = Plancito.colors
     SectionCard {
         if (p.address != null) {
-            InfoRow("📍") {
+            InfoRow(Icons.Outlined.Place) {
                 Text(
                     p.address,
                     style = MaterialTheme.typography.bodyMedium,
@@ -267,10 +286,10 @@ private fun Info(p: Place, addedBy: String?) {
             }
         }
         if (!p.visited && p.plannedDate != null) {
-            InfoRow("📅") { Text("${Dates.format(p.plannedDate)} (${Dates.relativeDays(p.plannedDate)})", style = MaterialTheme.typography.bodyMedium) }
+            InfoRow(Icons.Outlined.Event) { Text("${Dates.format(p.plannedDate)} (${Dates.relativeDays(p.plannedDate)})", style = MaterialTheme.typography.bodyMedium) }
         }
         if (p.link != null) {
-            InfoRow("🔗") {
+            InfoRow(Icons.Outlined.Link) {
                 Text(
                     p.link.removePrefix("https://").removePrefix("http://").removePrefix("www."),
                     style = MaterialTheme.typography.bodyMedium,
@@ -280,8 +299,8 @@ private fun Info(p: Place, addedBy: String?) {
                 )
             }
         }
-        if (p.description != null) InfoRow("📝") { Text(p.description, style = MaterialTheme.typography.bodyMedium) }
-        InfoRow("➕") {
+        if (p.description != null) InfoRow(Icons.AutoMirrored.Outlined.Notes) { Text(p.description, style = MaterialTheme.typography.bodyMedium) }
+        InfoRow(Icons.Outlined.PersonAdd) {
             Text(
                 "Agregado por ${addedBy ?: "…"} el ${Dates.format(p.createdAt)}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -292,9 +311,9 @@ private fun Info(p: Place, addedBy: String?) {
 }
 
 @Composable
-private fun InfoRow(icon: String, content: @Composable () -> Unit) {
+private fun InfoRow(icon: ImageVector, content: @Composable () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(icon, modifier = Modifier.width(22.dp))
+        Icon(icon, null, tint = Plancito.colors.textMuted, modifier = Modifier.width(22.dp).size(20.dp))
         Box(Modifier.weight(1f)) { content() }
     }
 }
@@ -305,7 +324,7 @@ private fun MiniMap(p: Place) {
     val point = GeoPoint(p.lat!!, p.lng!!)
     Box(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).clickable { open(context, Geocode.mapsUrl(p)) }) {
         OsmMap(
-            pins = listOf(MapPin(p.id, point.latitude, point.longitude, categoryInfo(p.category).emoji, Plancito.colors.primary, p.name)),
+            pins = listOf(MapPin(p.id, point.latitude, point.longitude, p.category, if (p.visited) Plancito.colors.visited else Plancito.colors.primary, p.name)),
             focus = point,
             interactive = false,
             modifier = Modifier.fillMaxSize(),
@@ -337,14 +356,20 @@ private fun ReviewsSection(reviews: List<Review>, members: Map<String, Profile>,
                     }
                     if (r.comment != null) Text(r.comment, style = MaterialTheme.typography.bodyMedium)
                     when (r.wouldReturn) {
-                        true -> Text("🔁 Volvería", style = MaterialTheme.typography.labelMedium, color = t.visitedText)
-                        false -> Text("🚫 No volvería", style = MaterialTheme.typography.labelMedium, color = t.textMuted)
+                        true -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Filled.Check, null, tint = t.visitedText, modifier = Modifier.size(14.dp))
+                            Text("Volvería", style = MaterialTheme.typography.labelMedium, color = t.visitedText)
+                        }
+                        false -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(Icons.Filled.Close, null, tint = t.textMuted, modifier = Modifier.size(14.dp))
+                            Text("No volvería", style = MaterialTheme.typography.labelMedium, color = t.textMuted)
+                        }
                         null -> {}
                     }
                 }
             }
         }
-        if (mine == null) PrimaryButton("⭐ Dejar mi reseña", onClick = onReview)
+        if (mine == null) PrimaryButton("Dejar mi reseña", onClick = onReview, icon = Icons.Filled.Star)
         else OutlinedButton(onClick = onReview, modifier = Modifier.fillMaxWidth()) { Text("Editar mi reseña") }
     }
 }
@@ -390,7 +415,10 @@ private fun PhotosSection(
         OutlinedButton(
             onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("📷 Subir fotos") }
+        ) {
+            Icon(Icons.Outlined.PhotoCamera, null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
+            Text("Subir fotos")
+        }
     }
     viewing?.let { start ->
         PhotoViewer(

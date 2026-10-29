@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,6 +24,7 @@ import com.fdm.plancito.data.InvitePreview
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.EmptyState
 import com.fdm.plancito.ui.common.ErrorText
+import com.fdm.plancito.ui.common.GroupAvatar
 import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.PrimaryButton
 import com.fdm.plancito.ui.theme.Plancito
@@ -70,9 +73,9 @@ fun JoinScreen(code: String, onDone: () -> Unit) {
         LoadingBar(loading)
         val p = preview
         when {
-            notFound -> EmptyState("🤔", "Esa invitación no existe", "Puede que hayan cambiado el código. Pediles uno nuevo.")
+            notFound -> EmptyState(Icons.Outlined.LinkOff, "Esa invitación no existe", "Puede que hayan cambiado el código. Pediles uno nuevo.")
             p != null -> {
-                Text(p.emoji, fontSize = 56.sp)
+                GroupAvatar(p.id, p.name, size = 72.dp)
                 Text(
                     if (p.alreadyMember) "Ya estás en ${p.name}" else "Te invitaron a ${p.name}",
                     style = MaterialTheme.typography.headlineSmall,

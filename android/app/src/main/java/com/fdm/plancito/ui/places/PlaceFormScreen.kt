@@ -13,12 +13,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -55,6 +60,7 @@ import com.fdm.plancito.ui.common.ErrorText
 import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.PrimaryButton
 import com.fdm.plancito.ui.common.ScreenHeader
+import com.fdm.plancito.ui.common.icon
 import com.fdm.plancito.ui.map.MapPin
 import com.fdm.plancito.ui.map.OsmMap
 import com.fdm.plancito.ui.theme.Plancito
@@ -182,7 +188,7 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
                         .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(c.emoji, fontSize = 20.sp)
+                    Icon(c.icon, null, tint = if (on) t.primaryText else t.text, modifier = Modifier.size(22.dp))
                     Text(c.label, style = MaterialTheme.typography.labelSmall, color = if (on) t.primaryText else t.textMuted, maxLines = 1)
                 }
             }
@@ -196,7 +202,7 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
         }
         val point = if (form.lat != null && form.lng != null) GeoPoint(form.lat!!, form.lng!!) else null
         OsmMap(
-            pins = point?.let { listOf(MapPin("new", it.latitude, it.longitude, categoryInfo(form.category).emoji, t.primary, form.name)) }.orEmpty(),
+            pins = point?.let { listOf(MapPin("new", it.latitude, it.longitude, form.category, t.primary, form.name)) }.orEmpty(),
             focus = point,
             onTap = { la, lo ->
                 form.lat = la
@@ -220,7 +226,8 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
         Label("¿Cuándo piensan ir?")
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { pickingDate = true }) {
-                Text(form.plannedDate?.let { "📅 ${Dates.format(it)}" } ?: "Elegir fecha (opcional)")
+                Icon(Icons.Outlined.Event, null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
+                Text(form.plannedDate?.let { Dates.format(it) } ?: "Elegir fecha (opcional)")
             }
             if (form.plannedDate != null) TextButton(onClick = { form.plannedDate = null }) { Text("Quitar", color = t.textMuted) }
         }
@@ -318,7 +325,9 @@ private fun TagInput(tags: List<String>, suggestions: List<String>, onChange: (L
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (tags.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                tags.forEach { tag -> InputChip(selected = true, onClick = { onChange(tags - tag) }, label = { Text("#$tag  ✕") }) }
+                tags.forEach { tag -> InputChip(selected = true, onClick = { onChange(tags - tag) }, label = { Text("#$tag") },
+                        trailingIcon = { Icon(Icons.Filled.Close, "Quitar", modifier = Modifier.size(16.dp)) },
+                    ) }
             }
         }
         OutlinedTextField(

@@ -3,6 +3,8 @@ package com.fdm.plancito
 import com.fdm.plancito.data.Dates
 import com.fdm.plancito.data.averageRating
 import com.fdm.plancito.data.categoryInfo
+import com.fdm.plancito.data.groupColorIndex
+import com.fdm.plancito.data.groupInitials
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -41,6 +43,22 @@ class DatesAndRatingTest {
     @Test
     fun unknownCategoryFallsBackToOtro() {
         assertEquals("otro", categoryInfo("cualquiera").value)
-        assertEquals("🍸", categoryInfo("bar").emoji)
+        assertEquals("Bar", categoryInfo("bar").label)
+    }
+
+    @Test
+    fun groupInitials() {
+        assertEquals("CS", groupInitials("Con Sofi"))
+        assertEquals("AD", groupInitials("Amigos del club"))
+        assertEquals("FA", groupInitials("familia"))
+        assertEquals("Á", groupInitials("á"))
+        assertEquals("?", groupInitials("  "))
+    }
+
+    @Test
+    fun groupColorIsStable() {
+        val id = "7d2c1f3a-0000-4000-8000-000000000000"
+        assertEquals(groupColorIndex(id, 6), groupColorIndex(id, 6))
+        assert(groupColorIndex(id, 6) in 0 until 6)
     }
 }

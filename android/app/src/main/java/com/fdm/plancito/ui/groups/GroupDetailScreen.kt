@@ -56,8 +56,8 @@ class GroupDetailViewModel(private val groupId: String) : BaseViewModel() {
         members.value = repo.members(groupId)
     }
 
-    fun update(name: String, emoji: String) = launchSafe {
-        repo.updateGroup(groupId, name, emoji)
+    fun update(name: String) = launchSafe {
+        repo.updateGroup(groupId, name)
         groups.refresh()
     }
 
@@ -94,7 +94,7 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
     val me = vm.repo.userId
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader(group?.let { "${it.emoji} ${it.name}" }, onBack = onBack) {
+        ScreenHeader(group?.name, onBack = onBack) {
             if (group != null) TextButton(onClick = { editing = true }) { Text("Editar") }
         }
         LoadingBar(loading)
@@ -149,8 +149,7 @@ fun GroupDetailScreen(groupId: String, onBack: () -> Unit) {
                 title = "Editar grupo",
                 confirmLabel = "Guardar",
                 initialName = group.name,
-                initialEmoji = group.emoji,
-                onConfirm = { name, emoji -> vm.update(name, emoji); editing = false },
+                onConfirm = { name -> vm.update(name); editing = false },
                 onDismiss = { editing = false },
             )
         }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -150,18 +152,21 @@ fun LoadingBar(loading: Boolean) {
 @Composable
 fun ErrorText(error: String?, modifier: Modifier = Modifier) {
     if (error != null) {
-        Text("⚠️ $error", color = Plancito.colors.danger, style = MaterialTheme.typography.bodySmall, modifier = modifier)
+        Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Outlined.ErrorOutline, null, tint = Plancito.colors.danger, modifier = Modifier.size(16.dp))
+            Text(error, color = Plancito.colors.danger, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
 @Composable
-fun EmptyState(emoji: String, title: String, body: String? = null, action: (@Composable () -> Unit)? = null) {
+fun EmptyState(icon: ImageVector, title: String, body: String? = null, action: (@Composable () -> Unit)? = null) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(emoji, fontSize = 44.sp)
+        Icon(icon, null, tint = Plancito.colors.textMuted, modifier = Modifier.size(44.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         if (body != null) {
             Text(body, style = MaterialTheme.typography.bodyMedium, color = Plancito.colors.textMuted, textAlign = TextAlign.Center)
@@ -178,6 +183,7 @@ fun PrimaryButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     danger: Boolean = false,
+    icon: ImageVector? = null,
 ) {
     val t = Plancito.colors
     Button(
@@ -190,7 +196,10 @@ fun PrimaryButton(
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = t.onPrimary)
-        else Text(text, style = MaterialTheme.typography.titleMedium)
+        else {
+            if (icon != null) Icon(icon, null, modifier = Modifier.padding(end = 8.dp).size(20.dp))
+            Text(text, style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
 

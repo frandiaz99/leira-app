@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,6 +39,7 @@ import com.fdm.plancito.data.Membership
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.EmptyState
 import com.fdm.plancito.ui.common.ErrorText
+import com.fdm.plancito.ui.common.GroupAvatar
 import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.Pill
 import com.fdm.plancito.ui.common.PrimaryButton
@@ -51,8 +53,8 @@ class GroupsViewModel : BaseViewModel() {
 
     override suspend fun load() = groups.refresh()
 
-    fun create(name: String, emoji: String) = launchSafe {
-        val g = repo.createGroup(name, emoji)
+    fun create(name: String) = launchSafe {
+        val g = repo.createGroup(name)
         groups.refresh()
         groups.select(g.id)
         joined.value = g
@@ -121,7 +123,7 @@ fun GroupsScreen(onOpen: (String) -> Unit, onJoined: () -> Unit) {
             title = "Nuevo grupo",
             confirmLabel = "Crear",
             error = error,
-            onConfirm = { name, emoji -> vm.create(name, emoji) },
+            onConfirm = { name -> vm.create(name) },
             onDismiss = { creating = false; vm.error.value = null },
         )
     }
@@ -134,7 +136,7 @@ fun GroupsScreen(onOpen: (String) -> Unit, onJoined: () -> Unit) {
 private fun Welcome(onCreate: () -> Unit, onJoin: () -> Unit) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         EmptyState(
-            "👋",
+            Icons.Outlined.Groups,
             "Armá tu primer grupo",
             "Un grupo es con quién comparten la lista: tu pareja, amigos, la familia. Podés estar en varios.",
         )
@@ -151,9 +153,7 @@ private fun GroupRow(m: Membership, isActive: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(t.primaryTint), contentAlignment = Alignment.Center) {
-            Text(m.group.emoji, fontSize = 22.sp)
-        }
+        GroupAvatar(m.group.id, m.group.name, size = 44.dp)
         Column(Modifier.weight(1f)) {
             Text(m.group.name, style = MaterialTheme.typography.titleMedium)
             if (m.role == "owner") Text("Lo administrás vos", style = MaterialTheme.typography.bodySmall, color = t.textMuted)

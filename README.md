@@ -1,4 +1,4 @@
-# Plancito 📍💞
+# Plancito
 
 App Android para anotar con tu pareja o tus amigos los lugares a los que quieren ir y, cuando van, dejar cada uno su reseña, puntaje y fotos.
 
@@ -34,7 +34,7 @@ supabase/
 
 ### Modelo de datos
 
-- **groups**: nombre, emoji, `invite_code`. **group_members**: (grupo, usuario, `owner`/`member`). Altas y bajas por RPC: `create_group`, `join_group`, `leave_group`, `regenerate_invite`, `invite_preview`.
+- **groups**: nombre, `invite_code` (la columna `emoji` quedó sin uso: la app muestra las iniciales del nombre). **group_members**: (grupo, usuario, `owner`/`member`). Altas y bajas por RPC: `create_group`, `join_group`, `leave_group`, `regenerate_invite`, `invite_preview`.
 - **profiles**: uno por usuario (lo crea un trigger; con Google toma nombre y foto).
 - **places**: del grupo (`group_id`), `wishlist`/`visited`, categoría, etiquetas, fecha planeada, ubicación.
 - **reviews**: una por persona por lugar. **photos**: el archivo vive en el bucket privado `photos` en `{group_id}/{place_id}/{uuid}.jpg`.

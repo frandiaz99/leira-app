@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.shareIn
 import org.osmdroid.config.Configuration
+import java.io.File
 
 class PlancitoApp : Application() {
 
@@ -37,8 +38,14 @@ class PlancitoApp : Application() {
         prefs = Prefs(this)
         repository = Repository()
         groups = GroupStore(repository, prefs, appScope)
-        // Los servidores de tiles de OpenStreetMap piden identificar la app.
-        Configuration.getInstance().userAgentValue = packageName
+        Configuration.getInstance().apply {
+            // Los servidores de tiles de OpenStreetMap piden identificar la app (nombre y versión).
+            userAgentValue = "Plancito/${BuildConfig.VERSION_NAME} ($packageName)"
+            // Por defecto osmdroid guarda el caché en el almacenamiento externo, donde desde
+            // Android 10 la app no puede escribir: el mapa queda gris. Va en el caché de la app.
+            osmdroidBasePath = File(cacheDir, "osmdroid")
+            osmdroidTileCache = File(cacheDir, "osmdroid/tiles")
+        }
     }
 
     companion object {

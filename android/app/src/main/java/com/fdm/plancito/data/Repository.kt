@@ -150,11 +150,9 @@ class Repository {
             order("joined_at", Order.ASCENDING)
         }.decodeList()
 
-    suspend fun createGroup(name: String, emoji: String): Group =
-        client.postgrest.rpc("create_group", buildJsonObject {
-            put("group_name", name)
-            put("group_emoji", emoji)
-        }).decodeAs()
+    // La columna emoji de groups quedó sin uso: la app muestra las iniciales del nombre.
+    suspend fun createGroup(name: String): Group =
+        client.postgrest.rpc("create_group", buildJsonObject { put("group_name", name) }).decodeAs()
 
     suspend fun joinGroup(code: String): Group =
         client.postgrest.rpc("join_group", buildJsonObject { put("code", code) }).decodeAs()
@@ -162,11 +160,8 @@ class Repository {
     suspend fun invitePreview(code: String): InvitePreview? =
         client.postgrest.rpc("invite_preview", buildJsonObject { put("code", code) }).decodeList<InvitePreview>().firstOrNull()
 
-    suspend fun updateGroup(groupId: String, name: String, emoji: String) {
-        client.from("groups").update(buildJsonObject {
-            put("name", name)
-            put("emoji", emoji)
-        }) { filter { eq("id", groupId) } }
+    suspend fun updateGroup(groupId: String, name: String) {
+        client.from("groups").update(buildJsonObject { put("name", name) }) { filter { eq("id", groupId) } }
     }
 
     suspend fun regenerateInvite(groupId: String): Group =

@@ -9,9 +9,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.ZoomOutMap
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -27,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.ui.common.Segment
 import com.fdm.plancito.ui.common.SegmentedControl
+import com.fdm.plancito.ui.common.icon
 import com.fdm.plancito.ui.places.GroupSwitcher
 import com.fdm.plancito.ui.places.PlacesViewModel
 import com.fdm.plancito.ui.theme.Plancito
@@ -41,6 +49,7 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
     val t = Plancito.colors
     var show by rememberSaveable { mutableStateOf(Show.All) }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    var refit by rememberSaveable { mutableStateOf(0) }
 
     val located = places.orEmpty().filter {
         it.hasLocation && when (show) {
@@ -50,11 +59,11 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
         }
     }
     val pins = located.map { p ->
-        MapPin(p.id, p.lat!!, p.lng!!, categoryInfo(p.category).emoji, if (p.visited) t.visited else t.primary, p.name)
+        MapPin(p.id, p.lat!!, p.lng!!, p.category, if (p.visited) t.visited else t.primary, p.name)
     }
 
     Box(Modifier.fillMaxSize()) {
-        OsmMap(pins = pins, fitAll = true, onPinClick = { selected = it }, onTap = { _, _ -> selected = null }, modifier = Modifier.fillMaxSize())
+        OsmMap(pins = pins, fitAll = true, refitKey = refit, onPinClick = { selected = it }, onTap = { _, _ -> selected = null }, modifier = Modifier.fillMaxSize())
 
         Column(
             Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp),
@@ -67,6 +76,16 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
                 onSelect = { show = it },
                 height = 36.dp,
             )
+        }
+
+        if (pins.size > 1) {
+            SmallFloatingActionButton(
+                onClick = { refit++ },
+                containerColor = t.surface,
+                contentColor = t.text,
+                // Encima de la tarjeta del lugar elegido, si hay una.
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (selected != null) 120.dp else 40.dp),
+            ) { Icon(Icons.Outlined.ZoomOutMap, "Ver todos los lugares") }
         }
 
         if (places != null && pins.isEmpty()) {
@@ -85,16 +104,24 @@ fun MapScreen(onOpen: (String) -> Unit, onManageGroups: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(cat.emoji, style = MaterialTheme.typography.headlineMedium)
+                Box(
+                    Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(if (p.visited) t.visitedTint else t.primaryTint),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(cat.icon, null, tint = if (p.visited) t.visitedText else t.primaryText, modifier = Modifier.size(26.dp)) }
                 Column(Modifier.weight(1f)) {
                     Text(p.name, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (p.visited) "Visitado" + (p.averageRating?.let { " · ⭐ %.1f".format(it) } ?: "") else "Pendiente",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (p.visited) t.visitedText else t.primaryText,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val color = if (p.visited) t.visitedText else t.primaryText
+                        Text(if (p.visited) "Visitado" else "Pendiente", style = MaterialTheme.typography.bodySmall, color = color)
+                        p.averageRating?.takeIf { p.visited }?.let { avg ->
+                            Text("·", style = MaterialTheme.typography.bodySmall, color = color)
+                            Icon(Icons.Filled.Star, null, tint = t.star, modifier = Modifier.size(14.dp))
+                            Text("%.1f".format(avg), style = MaterialTheme.typography.bodySmall, color = color)
+                        }
+                    }
                 }
-                Text("Ver ›", style = MaterialTheme.typography.labelLarge, color = t.primaryText)
+                Text("Ver", style = MaterialTheme.typography.labelLarge, color = t.primaryText)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = t.primaryText)
             }
         }
     }
