@@ -39,6 +39,14 @@ Ya está en `.mcp.json`. Al abrir Claude Code en esta carpeta, aprobá el servid
 2. Supabase → **Authentication → Providers → Google**: habilitalo y pegá el Client ID y el secret del cliente *Web*.
 3. El Client ID *Web* va en `google.webClientId` (paso 3). Si queda vacío, la app oculta "Continuar con Google".
 
+**Si "Continuar con Google" no entra**, la app muestra la causa debajo del formulario (y en `adb logcat -s Login`):
+
+| Mensaje / síntoma | Qué falta |
+|---|---|
+| "Google rechazó la app" o "no ofreció ninguna cuenta" | El OAuth client **Android** con el SHA-1 de la firma de *ese* APK. El APK de Releases se firma con `plancito.jks`, el de Android Studio con el debug keystore: cada uno necesita su client. |
+| "Google no está habilitado en Supabase" | Habilitar Google en Supabase → Authentication → Providers. |
+| "Supabase no acepta este Client ID" | En ese provider, el campo *Client IDs* tiene que tener el Client ID **Web** (el mismo de `google.webClientId`). |
+
 ## 3. App
 
 `android/local.properties` (no se versiona):

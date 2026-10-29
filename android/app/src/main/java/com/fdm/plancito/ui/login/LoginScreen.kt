@@ -1,5 +1,6 @@
 package com.fdm.plancito.ui.login
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import com.fdm.plancito.PlancitoApp
 import com.fdm.plancito.data.GoogleSignIn
 import com.fdm.plancito.ui.common.ErrorText
@@ -45,6 +47,9 @@ import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.launch
 
 private const val MIN_PASSWORD = 6
+private const val TAG = "Login"
+private const val GOOGLE_SETUP_ERROR =
+    "Google rechazó la app: falta el OAuth client \"Android\" con el SHA-1 de esta firma en Google Cloud (ver docs/setup.md)."
 
 /** Entrar con Google o con mail y contraseña. */
 @Composable
@@ -66,9 +71,17 @@ fun LoginScreen(pendingInvite: Boolean) {
         scope.launch {
             try {
                 block()
-            } catch (_: GetCredentialCancellationException) {
-                // Cerró el selector de cuentas: no es un error.
+            } catch (e: GetCredentialCancellationException) {
+                // Cerró el selector de cuentas: no es un error. Pero Google también "cancela"
+                // ("[16] Account reauth failed") cuando el SHA-1 de la app no está registrado.
+                Log.w(TAG, "Google sign-in cancelado", e)
+                if (e.message?.contains("reauth", true) == true) error = GOOGLE_SETUP_ERROR
+            } catch (e: NoCredentialException) {
+                Log.w(TAG, "Google sign-in sin cuentas", e)
+                error = "Google no ofreció ninguna cuenta. Si el teléfono tiene una cuenta de Google, " +
+                    "falta registrar el SHA-1 de la app en Google Cloud."
             } catch (e: Exception) {
+                Log.w(TAG, "Login falló", e)
                 error = authError(e)
             } finally {
                 busy = false
@@ -165,6 +178,12 @@ private fun authError(e: Exception): String {
         msg.contains("already registered", true) || msg.contains("already exists", true) ->
             "Ya hay una cuenta con ese mail. Entrá con tu contraseña o con Google."
         msg.contains("Password should", true) || msg.contains("weak", true) -> "La contraseña es muy corta o muy fácil."
+        // Errores del canje del token de Google en Supabase: son de configuración.
+        msg.contains("provider is not enabled", true) || msg.contains("provider_disabled", true) ->
+            "Google no está habilitado en Supabase (Authentication → Providers → Google)."
+        msg.contains("audience", true) ->
+            "Supabase no acepta este Client ID de Google: cargá el Client ID \"Web\" en Authentication → Providers → Google."
+        msg.contains("nonce", true) -> "Falló la verificación de Google (nonce). Probá de nuevo."
         else -> friendlyError(e)
     }
 }
