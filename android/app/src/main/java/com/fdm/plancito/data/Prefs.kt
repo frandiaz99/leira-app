@@ -13,6 +13,21 @@ class Prefs(context: Context) {
         get() = sp.getString("last_email", "") ?: ""
         set(v) = sp.edit().putString("last_email", v).apply()
 
+    /** Recordatorio el día anterior a la fecha planeada. */
+    var reminders: Boolean
+        get() = sp.getBoolean("reminders", true)
+        set(v) = sp.edit().putBoolean("reminders", v).apply()
+
+    /** Avisos cuando otro miembro agrega un lugar o deja una reseña. */
+    var groupNotifications: Boolean
+        get() = sp.getBoolean("group_notifications", true)
+        set(v) = sp.edit().putBoolean("group_notifications", v).apply()
+
+    /** Ya se pidió el permiso de notificaciones una vez (no insistir). */
+    var askedNotifications: Boolean
+        get() = sp.getBoolean("asked_notifications", false)
+        set(v) = sp.edit().putBoolean("asked_notifications", v).apply()
+
     private val activeGroup = MutableStateFlow(sp.getString("active_group", null))
 
     /** Grupo que se ve en Lugares y Mapa. */

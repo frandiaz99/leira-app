@@ -10,6 +10,8 @@ import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.exceptions.RestException
+import io.github.jan.supabase.functions.Functions
+import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -22,7 +24,9 @@ import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.serializer.KotlinXSerializer
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -55,6 +59,7 @@ class Repository {
             install(Postgrest)
             install(Realtime)
             install(Storage)
+            install(Functions)
         }
     }
 
@@ -173,15 +178,43 @@ class Repository {
 
     // ---------------------------------------------------------------- Lugares
 
-    suspend fun places(groupId: String): List<Place> =
-        client.from("places").select(Columns.raw("*, reviews(*), photos(*)")) {
+    suspend fun places(groupId: String): List<Place> = withPlaceColumns { columns ->
+        client.from("places").select(columns) {
             filter { eq("group_id", groupId) }
             order("created_at", Order.DESCENDING)
         }.decodeList()
+    }
 
-    suspend fun place(id: String): Place? =
-        client.from("places").select(Columns.raw("*, reviews(*), photos(*)")) { filter { eq("id", id) } }
-            .decodeSingleOrNull()
+    suspend fun place(id: String): Place? = withPlaceColumns { columns ->
+        client.from("places").select(columns) { filter { eq("id", id) } }.decodeSingleOrNull()
+    }
+
+    /**
+     * Pide los lugares con sus "me interesa". Si todavía no se aplicó esa migración
+     * en Supabase la relación no existe y se piden sin ella, para que la app siga andando.
+     */
+    private suspend fun <T> withPlaceColumns(block: suspend (Columns) -> T): T = try {
+        block(Columns.raw("*, reviews(*), photos(*), place_interests(user_id)"))
+    } catch (e: RestException) {
+        if (e.message?.contains("place_interests") != true) throw e
+        block(Columns.raw("*, reviews(*), photos(*)"))
+    }
+
+    suspend fun setInterested(placeId: String, interested: Boolean) {
+        if (interested) {
+            client.from("place_interests").upsert(buildJsonObject {
+                put("place_id", placeId)
+                put("user_id", userId)
+            }) { onConflict = "place_id,user_id" }
+        } else {
+            client.from("place_interests").delete {
+                filter {
+                    eq("place_id", placeId)
+                    eq("user_id", userId)
+                }
+            }
+        }
+    }
 
     // Los nulls van explícitos: al editar, vaciar un campo tiene que borrarlo en la base.
     private fun PlaceInput.toJson() = buildJsonObject {
@@ -194,6 +227,8 @@ class Repository {
         put("tags", JsonArray(tags.map { JsonPrimitive(it) }))
         put("planned_date", plannedDate)
         put("link", link)
+        // Solo si hay algo que guardar: así se puede editar aunque falte la migración del precio.
+        if (price != null || clearPrice) put("price", price)
     }
 
     // ---------------------------------------------------------------- Categorías propias
@@ -306,6 +341,37 @@ class Repository {
 
     private fun absoluteStorageUrl(url: String): String =
         if (url.startsWith("http")) url else "${BuildConfig.SUPABASE_URL}/storage/v1/${url.trimStart('/')}"
+
+    // ---------------------------------------------------------------- Avisos
+
+    /** Token de Firebase de este teléfono, para que la Edge Function "notify" le mande avisos. */
+    suspend fun saveDeviceToken(token: String) {
+        client.from("device_tokens").upsert(buildJsonObject {
+            put("token", token)
+            put("user_id", userId)
+            put("updated_at", java.time.Instant.now().toString())
+        }) { onConflict = "token" }
+    }
+
+    suspend fun deleteDeviceToken(token: String) {
+        client.from("device_tokens").delete { filter { eq("token", token) } }
+    }
+
+    /**
+     * Avisa a los otros miembros del grupo ([kind] = "place" o "review"). Si la función
+     * no está desplegada o falla, no pasa nada: el aviso es un extra.
+     */
+    suspend fun notifyGroup(kind: String, placeId: String) {
+        runCatching {
+            client.functions.invoke("notify") {
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("kind", kind)
+                    put("place_id", placeId)
+                }.toString())
+            }
+        }
+    }
 
     // ---------------------------------------------------------------- Realtime
 

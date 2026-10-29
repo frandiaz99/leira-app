@@ -1,9 +1,13 @@
 package com.fdm.plancito.ui
 
+import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +47,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,7 +61,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fdm.plancito.PlancitoApp
+import com.fdm.plancito.OpenPlace
 import com.fdm.plancito.data.Invite
+import com.fdm.plancito.data.Share
+import com.fdm.plancito.notify.Notifier
+import com.fdm.plancito.notify.Push
+import com.fdm.plancito.ui.summary.SummaryScreen
 import com.fdm.plancito.ui.common.ErrorText
 import com.fdm.plancito.ui.groups.GroupDetailScreen
 import com.fdm.plancito.ui.groups.GroupsScreen
@@ -77,7 +87,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) handleInvite(intent)
+        if (savedInstanceState == null) handleIntent(intent)
         setContent {
             PlancitoTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Root() }
@@ -85,15 +95,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // launchMode singleTask: un link de invitación con la app abierta llega acá.
+    // launchMode singleTask: un link de invitación, algo compartido o una notificación con la app abierta llega acá.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleInvite(intent)
+        handleIntent(intent)
     }
 
-    /** Guarda el código; se procesa después del login si hace falta. */
-    private fun handleInvite(intent: Intent?) {
-        Invite.codeFrom(intent?.data?.toString())?.let { PlancitoApp.instance.prefs.setPendingInvite(it) }
+    /** Guarda lo que trae el intent; se procesa después del login si hace falta. */
+    private fun handleIntent(intent: Intent?) {
+        val app = PlancitoApp.instance
+        Invite.codeFrom(intent?.data?.toString())?.let { app.prefs.setPendingInvite(it) }
+        if (intent?.action == Intent.ACTION_SEND) {
+            Share.parse(intent.getStringExtra(Intent.EXTRA_TEXT), intent.getStringExtra(Intent.EXTRA_SUBJECT))
+                ?.let { app.pendingShare.value = it }
+        }
+        intent?.getStringExtra(Notifier.EXTRA_PLACE_ID)?.let { id ->
+            app.pendingOpen.value = OpenPlace(id, intent.getStringExtra(Notifier.EXTRA_GROUP_ID))
+        }
     }
 }
 
@@ -133,7 +151,10 @@ private fun SignedIn() {
     val scope = rememberCoroutineScope()
     val userId = runCatching { app.repository.userId }.getOrNull()
 
-    LaunchedEffect(userId) { store.refresh() }
+    LaunchedEffect(userId) {
+        store.refresh()
+        Push.register()
+    }
 
     val list = memberships
     when {
@@ -207,6 +228,28 @@ private fun MainNav() {
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
     val idArg = listOf(navArgument("id") { type = NavType.StringType })
+    val app = PlancitoApp.instance
+    val context = LocalContext.current
+
+    // Permiso de notificaciones (Android 13+): se pide una sola vez, para recordatorios y avisos.
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !Notifier.canNotify(context) && !app.prefs.askedNotifications) {
+            app.prefs.askedNotifications = true
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+    // Algo compartido desde otra app: se abre el formulario, que lo carga.
+    val share by app.pendingShare.collectAsState()
+    LaunchedEffect(share) { if (share != null && current != "new-place") nav.navigate("new-place") }
+    // Notificación tocada: se pasa a ese grupo y se abre el lugar.
+    val open by app.pendingOpen.collectAsState()
+    LaunchedEffect(open) {
+        val o = open ?: return@LaunchedEffect
+        app.pendingOpen.value = null
+        o.groupId?.let { app.groups.select(it) }
+        nav.navigate("place/${o.placeId}")
+    }
 
     Scaffold(
         bottomBar = {
@@ -228,7 +271,10 @@ private fun MainNav() {
             composable("groups") {
                 GroupsScreen(onOpen = { id -> nav.navigate("group/$id") }, onJoined = { nav.openTab("places") })
             }
-            composable("profile") { ProfileScreen() }
+            composable("profile") { ProfileScreen(onSummary = { nav.navigate("summary") }) }
+            composable("summary") {
+                SummaryScreen(onBack = { nav.popBackStack() }, onOpen = { id -> nav.navigate("place/$id") })
+            }
             composable("new-place") {
                 PlaceFormScreen(
                     placeId = null,

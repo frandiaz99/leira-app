@@ -71,9 +71,13 @@ data class Place(
     val status: String = STATUS_WISHLIST, // wishlist | visited
     @SerialName("visited_at") val visitedAt: String? = null,
     val link: String? = null,
+    /** 1 a 4 ($ a $$$$); null = sin dato. */
+    val price: Int? = null,
     @SerialName("created_at") val createdAt: String,
     val reviews: List<Review> = emptyList(),
     val photos: List<Photo> = emptyList(),
+    /** Quiénes marcaron "Me interesa". */
+    @SerialName("place_interests") val interests: List<Interest> = emptyList(),
 ) {
     val visited: Boolean get() = status == STATUS_VISITED
     val hasLocation: Boolean get() = lat != null && lng != null
@@ -99,7 +103,13 @@ data class PlaceInput(
     val tags: List<String> = emptyList(),
     val plannedDate: String? = null,
     val link: String? = null,
+    val price: Int? = null,
+    /** Al editar: el lugar tenía precio y se lo sacaron (hay que mandar el null). */
+    val clearPrice: Boolean = false,
 )
+
+@Serializable
+data class Interest(@SerialName("user_id") val userId: String)
 
 @Serializable
 data class Review(

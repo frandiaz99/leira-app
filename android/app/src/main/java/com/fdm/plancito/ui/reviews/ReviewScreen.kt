@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fdm.plancito.PlancitoApp
 import com.fdm.plancito.data.Place
 import com.fdm.plancito.data.Review
 import com.fdm.plancito.ui.common.BaseViewModel
@@ -39,6 +40,7 @@ import com.fdm.plancito.ui.common.SectionCard
 import com.fdm.plancito.ui.common.StarRating
 import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class ReviewViewModel(private val placeId: String) : BaseViewModel() {
     val place = MutableStateFlow<Place?>(null)
@@ -53,7 +55,10 @@ class ReviewViewModel(private val placeId: String) : BaseViewModel() {
     }
 
     fun save(rating: Int, comment: String, wouldReturn: Boolean?) = launchSafe {
+        val isNew = place.value?.reviews?.none { it.userId == repo.userId } != false
         repo.saveReview(placeId, rating, comment.trim().ifBlank { null }, wouldReturn)
+        // Se avisa al grupo solo la primera vez, no en cada edición.
+        if (isNew) PlancitoApp.instance.appScope.launch { repo.notifyGroup("review", placeId) }
         done.value = true
     }
 

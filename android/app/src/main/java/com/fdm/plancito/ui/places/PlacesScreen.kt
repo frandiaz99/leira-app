@@ -23,11 +23,15 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.outlined.Casino
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -59,6 +63,11 @@ import coil3.compose.AsyncImage
 import com.fdm.plancito.PlancitoApp
 import com.fdm.plancito.data.Dates
 import com.fdm.plancito.data.Place
+import com.fdm.plancito.data.PlaceOrder
+import com.fdm.plancito.data.ordersFor
+import com.fdm.plancito.data.priceLabel
+import com.fdm.plancito.data.sortPlaces
+import com.fdm.plancito.notify.Reminders
 import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.EmptyState
@@ -100,14 +109,11 @@ class PlacesViewModel : BaseViewModel() {
         // Si mientras tanto se cambió de grupo, esta respuesta ya no sirve.
         if (groups.active.value?.id != groupId) return
         places.value = list
+        val app = PlancitoApp.instance
+        Reminders.sync(app, list, app.prefs.reminders)
         covers.value = repo.signedUrls(list.mapNotNull { it.cover?.storagePath })
     }
 }
-
-/** Pendientes: primero los que tienen fecha (la más cercana arriba), después el resto por más nuevo. */
-fun sortPlaces(list: List<Place>, visited: Boolean): List<Place> =
-    if (visited) list.sortedByDescending { it.visitedAt.orEmpty() }
-    else list.sortedWith(compareBy<Place> { it.plannedDate == null }.thenBy { it.plannedDate.orEmpty() }.thenByDescending { it.createdAt })
 
 @Composable
 fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: () -> Unit) {
@@ -122,6 +128,9 @@ fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: ()
     var tag by rememberSaveable { mutableStateOf<String?>(null) }
     var search by rememberSaveable { mutableStateOf("") }
     var searching by rememberSaveable { mutableStateOf(false) }
+    var order by rememberSaveable { mutableStateOf(PlaceOrder.Planned) }
+    var sorting by remember { mutableStateOf(false) }
+    var suggestion by remember { mutableStateOf<Place?>(null) }
 
     val all = places.orEmpty()
     val usedCategories = rememberCategories().filter { c -> all.any { it.category == c.value } }
@@ -135,12 +144,31 @@ fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: ()
                 (q.isEmpty() || "${p.name} ${p.address.orEmpty()} ${p.description.orEmpty()}".lowercase().contains(q))
         },
         visitedTab,
+        order.takeIf { it in ordersFor(visitedTab) } ?: PlaceOrder.Planned,
     )
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 GroupSwitcher(Modifier.weight(1f), onManageGroups)
+                // "¿A dónde vamos?": uno al azar entre los pendientes que se ven (respeta los filtros).
+                if (!visitedTab && filtered.size > 1) {
+                    IconButton(onClick = { suggestion = filtered.random() }) {
+                        Icon(Icons.Outlined.Casino, "¿A dónde vamos? Elegir uno al azar")
+                    }
+                }
+                Box {
+                    IconButton(onClick = { sorting = true }) { Icon(Icons.AutoMirrored.Filled.Sort, "Ordenar") }
+                    DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
+                        ordersFor(visitedTab).forEach { o ->
+                            DropdownMenuItem(
+                                text = { Text(if (o == PlaceOrder.Planned && visitedTab) "Última visita" else o.label) },
+                                trailingIcon = { if (o == order) Icon(Icons.Filled.Check, null) },
+                                onClick = { order = o; sorting = false },
+                            )
+                        }
+                    }
+                }
                 if (all.size > 3) {
                     IconButton(onClick = { searching = !searching; if (!searching) search = "" }) {
                         Icon(Icons.Filled.Search, "Buscar")
@@ -206,6 +234,25 @@ fun PlacesScreen(onOpen: (String) -> Unit, onAdd: () -> Unit, onManageGroups: ()
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
     }
+
+    suggestion?.let { p ->
+        AlertDialog(
+            onDismissRequest = { suggestion = null },
+            icon = { Icon(Icons.Outlined.Casino, null) },
+            title = { Text("¿Y si van a ${p.name}?") },
+            text = {
+                val cat = categoryInfo(p.category, rememberCategories())
+                Text(
+                    listOfNotNull(cat.label, priceLabel(p.price), p.address?.substringBefore(','))
+                        .joinToString(" · "),
+                )
+            },
+            confirmButton = { TextButton(onClick = { suggestion = null; onOpen(p.id) }) { Text("Ver") } },
+            dismissButton = {
+                TextButton(onClick = { suggestion = (filtered - p).randomOrNull() ?: p }) { Text("Otro") }
+            },
+        )
+    }
 }
 
 /** Avatar + "Con Sofi" + flecha: cambia el grupo activo. */
@@ -265,7 +312,7 @@ private fun PlaceCard(place: Place, coverUrl: String?, onClick: () -> Unit) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(place.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                cat.label + (place.address?.let { " · ${it.substringBefore(',')}" } ?: ""),
+                listOfNotNull(cat.label, priceLabel(place.price), place.address?.substringBefore(',')).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = t.textMuted,
                 maxLines = 1,
@@ -291,8 +338,14 @@ private fun PlaceCard(place: Place, coverUrl: String?, onClick: () -> Unit) {
                     )
                 }
             }
-            if (place.tags.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { place.tags.take(3).forEach { Pill("#$it") } }
+            if (place.tags.isNotEmpty() || (!place.visited && place.interests.isNotEmpty())) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (!place.visited && place.interests.isNotEmpty()) {
+                        Icon(Icons.Outlined.ThumbUp, null, tint = t.primaryText, modifier = Modifier.size(14.dp))
+                        Text("${place.interests.size}", style = MaterialTheme.typography.labelMedium, color = t.primaryText)
+                    }
+                    place.tags.take(3).forEach { Pill("#$it") }
+                }
             }
         }
     }

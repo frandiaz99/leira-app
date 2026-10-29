@@ -1,6 +1,7 @@
 # Compila el APK firmado de la app y lo publica como Release del repo
 # (se descarga desde el teléfono en la pestaña Releases).
 # Secrets necesarios: SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID, GOOGLE_MAPS_API_KEY, SIGNING_KEYSTORE_B64, SIGNING_PASSWORD.
+# Opcional: GOOGLE_SERVICES_JSON (el google-services.json de Firebase, para los avisos).
 name: Android APK
 
 on:
@@ -37,11 +38,13 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
         run: |
           printf 'supabase.url=%s\nsupabase.anonKey=%s\ngoogle.webClientId=%s\ngoogle.mapsApiKey=%s\n' \
             "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$GOOGLE_WEB_CLIENT_ID" "$GOOGLE_MAPS_API_KEY" > local.properties
           echo "$SIGNING_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/plancito.jks"
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json; fi
 
       - name: Tests y APK
         env:

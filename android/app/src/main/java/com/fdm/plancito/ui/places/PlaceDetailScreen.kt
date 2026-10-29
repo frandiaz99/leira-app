@@ -30,6 +30,8 @@ import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.LocationOff
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +72,7 @@ import com.fdm.plancito.data.Profile
 import com.fdm.plancito.data.Review
 import com.fdm.plancito.data.averageRating
 import com.fdm.plancito.data.categoryInfo
+import com.fdm.plancito.data.priceLabel
 import com.fdm.plancito.ui.common.Avatar
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.ConfirmDialog
@@ -113,6 +117,11 @@ class PlaceDetailViewModel(private val placeId: String) : BaseViewModel() {
         if (p == null) return
         if (members.value.isEmpty()) members.value = repo.members(p.groupId).associate { it.userId to it.profile }
         photoUrls.value = repo.signedUrls(p.photos.map { it.storagePath })
+    }
+
+    fun setInterested(interested: Boolean) = launchSafe {
+        repo.setInterested(placeId, interested)
+        load()
     }
 
     fun setVisited(date: String?) = launchSafe {
@@ -184,6 +193,7 @@ fun PlaceDetailScreen(placeId: String, onBack: () -> Unit, onEdit: () -> Unit, o
         ) {
             Header(p)
             VisitedControl(p, onSet = vm::setVisited)
+            if (!p.visited) Interests(p, members, vm.repo.userId, onToggle = vm::setInterested)
             Info(p, members[p.createdBy]?.displayName)
             if (p.lat != null && p.lng != null) MiniMap(p)
             ErrorText(error)
@@ -220,6 +230,7 @@ private fun Header(p: Place) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(cat.icon, null, tint = Plancito.colors.primaryText, modifier = Modifier.size(18.dp))
             Text(cat.label, style = MaterialTheme.typography.labelLarge, color = Plancito.colors.primaryText)
+            priceLabel(p.price)?.let { Text("· $it", style = MaterialTheme.typography.labelLarge, color = Plancito.colors.textMuted) }
         }
         Text(p.name, style = MaterialTheme.typography.headlineMedium)
         if (p.tags.isNotEmpty()) {
@@ -267,6 +278,32 @@ private fun VisitedControl(p: Place, onSet: (String?) -> Unit) {
             danger = false,
             onConfirm = { onSet(null) },
             onDismiss = { confirmUnset = false },
+        )
+    }
+}
+
+/** "Me interesa": cada uno marca los pendientes a los que quiere ir; se ve quiénes. */
+@Composable
+private fun Interests(p: Place, members: Map<String, Profile>, me: String, onToggle: (Boolean) -> Unit) {
+    val t = Plancito.colors
+    val mine = p.interests.any { it.userId == me }
+    val names = p.interests.map { if (it.userId == me) "Vos" else members[it.userId]?.displayName ?: "Alguien" }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FilterChip(
+            selected = mine,
+            onClick = { onToggle(!mine) },
+            label = { Text("Me interesa") },
+            leadingIcon = { Icon(if (mine) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp, null, modifier = Modifier.size(18.dp)) },
+        )
+        Text(
+            when (names.size) {
+                0 -> "Marcalo si querés ir."
+                1 -> "Le interesa a ${names[0]}."
+                else -> "Les interesa a ${names.dropLast(1).joinToString(", ")} y ${names.last()}."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = t.textMuted,
+            modifier = Modifier.weight(1f),
         )
     }
 }

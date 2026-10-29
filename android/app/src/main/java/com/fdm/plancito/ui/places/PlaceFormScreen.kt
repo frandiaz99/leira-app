@@ -48,11 +48,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fdm.plancito.PlancitoApp
 import com.fdm.plancito.data.Dates
 import com.fdm.plancito.data.GeoResult
 import com.fdm.plancito.data.Geocode
 import com.fdm.plancito.data.Place
 import com.fdm.plancito.data.PlaceInput
+import com.fdm.plancito.data.Share
+import com.fdm.plancito.data.SharedPlace
+import com.fdm.plancito.data.priceLabel
 import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.ui.common.BaseViewModel
 import com.fdm.plancito.ui.common.DateDialog
@@ -67,6 +71,7 @@ import com.fdm.plancito.ui.map.PlaceMap
 import com.fdm.plancito.ui.theme.Plancito
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import com.google.android.gms.maps.model.LatLng
 
@@ -98,7 +103,9 @@ class PlaceFormViewModel(private val placeId: String?) : BaseViewModel() {
             saved.value = placeId
         } else {
             val groupId = groups.active.value?.id ?: error("Elegí un grupo primero")
-            saved.value = repo.createPlace(groupId, input).id
+            val id = repo.createPlace(groupId, input).id
+            PlancitoApp.instance.appScope.launch { repo.notifyGroup("place", id) }
+            saved.value = id
         }
     }
 }
@@ -114,6 +121,19 @@ private class FormState(p: Place?) {
     var plannedDate by mutableStateOf(p?.plannedDate)
     var link by mutableStateOf(p?.link ?: "")
     var description by mutableStateOf(p?.description ?: "")
+    var price by mutableStateOf(p?.price)
+    private val hadPrice = p?.price != null
+
+    /** Carga lo que se compartió desde otra app (solo en un lugar nuevo). */
+    fun fill(shared: SharedPlace) {
+        if (shared.name.isNotBlank()) name = shared.name
+        shared.link?.let { link = it }
+        shared.address?.let { address = it }
+        if (shared.lat != null && shared.lng != null) {
+            lat = shared.lat
+            lng = shared.lng
+        }
+    }
 
     fun toInput(): PlaceInput {
         val l = link.trim()
@@ -127,6 +147,8 @@ private class FormState(p: Place?) {
             plannedDate = plannedDate,
             link = if (l.isEmpty()) null else if (Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(l)) l else "https://$l",
             description = description.trim().ifBlank { null },
+            price = price,
+            clearPrice = hadPrice && price == null,
         )
     }
 }
@@ -152,6 +174,23 @@ fun PlaceFormScreen(placeId: String?, onBack: () -> Unit, onSaved: (String) -> U
         }
         // key: el formulario se arma una vez que llegó el lugar a editar.
         val form = remember(initial?.id) { FormState(initial) }
+        if (placeId == null) {
+            // Compartido desde otra app: se carga y, si es un link corto de Google Maps, se busca la ubicación.
+            LaunchedEffect(Unit) {
+                val app = PlancitoApp.instance
+                app.pendingShare.filterNotNull().collect { shared ->
+                    app.pendingShare.value = null
+                    form.fill(shared)
+                    val link = shared.link
+                    if (shared.lat == null && link != null && Share.isShortMapsLink(link)) {
+                        Share.resolve(link)?.let { Share.coordinatesIn(it) }?.let { (la, lo) ->
+                            form.lat = la
+                            form.lng = lo
+                        }
+                    }
+                }
+            }
+        }
         Form(form, suggestions, isNew = placeId == null, saving = loading, error = error, onSubmit = { vm.save(form.toInput()) })
     }
 }
@@ -255,6 +294,18 @@ private fun Form(form: FormState, suggestions: List<String>, isNew: Boolean, sav
                 Text(form.plannedDate?.let { Dates.format(it) } ?: "Elegir fecha (opcional)")
             }
             if (form.plannedDate != null) TextButton(onClick = { form.plannedDate = null }) { Text("Quitar", color = t.textMuted) }
+        }
+
+        Label("Precio aproximado")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            (1..4).forEach { level ->
+                FilterChip(
+                    selected = form.price == level,
+                    // Tocar el elegido lo saca.
+                    onClick = { form.price = if (form.price == level) null else level },
+                    label = { Text(priceLabel(level)!!) },
+                )
+            }
         }
 
         Label("Etiquetas")

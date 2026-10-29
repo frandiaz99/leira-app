@@ -33,6 +33,17 @@ import com.fdm.plancito.ui.common.LoadingBar
 import com.fdm.plancito.ui.common.ScreenHeader
 import com.fdm.plancito.ui.common.SectionCard
 import com.fdm.plancito.ui.theme.Plancito
+import com.fdm.plancito.PlancitoApp
+import com.fdm.plancito.notify.Push
+import com.fdm.plancito.notify.Reminders
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class ProfileViewModel : BaseViewModel() {
@@ -52,13 +63,28 @@ class ProfileViewModel : BaseViewModel() {
     }
 
     fun signOut() = launchSafe {
+        // Antes de cerrar la sesión: este teléfono deja de recibir avisos y recordatorios.
+        Push.unregister()
+        Reminders.cancelAll(PlancitoApp.instance)
         groups.clear()
         repo.signOut()
+    }
+
+    fun setReminders(on: Boolean) {
+        val app = PlancitoApp.instance
+        app.prefs.reminders = on
+        // Al prenderlos se agendan la próxima vez que carga la lista de lugares.
+        if (!on) Reminders.cancelAll(app)
+    }
+
+    fun setGroupNotifications(on: Boolean) {
+        PlancitoApp.instance.prefs.groupNotifications = on
+        viewModelScope.launch { if (on) Push.register() else Push.unregister() }
     }
 }
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(onSummary: () -> Unit) {
     val vm: ProfileViewModel = viewModel()
     val profile by vm.profile.collectAsState()
     val loading by vm.loading.collectAsState()
@@ -94,9 +120,39 @@ fun ProfileScreen() {
                     modifier = Modifier.align(Alignment.End),
                 ) { Text("Guardar") }
             }
+            OutlinedButton(onClick = onSummary, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.Insights, null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
+                Text("Resumen del grupo")
+            }
+            SectionCard(title = "Notificaciones") {
+                val prefs = PlancitoApp.instance.prefs
+                var reminders by remember { mutableStateOf(prefs.reminders) }
+                var groupNotifications by remember { mutableStateOf(prefs.groupNotifications) }
+                SettingSwitch("Recordatorios", "El día anterior a la fecha que anotaron para ir.", reminders) {
+                    reminders = it
+                    vm.setReminders(it)
+                }
+                if (Push.isConfigured) {
+                    SettingSwitch("Novedades del grupo", "Cuando alguien agrega un lugar o deja una reseña.", groupNotifications) {
+                        groupNotifications = it
+                        vm.setGroupNotifications(it)
+                    }
+                }
+            }
             ErrorText(error)
             OutlinedButton(onClick = vm::signOut, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión", color = Plancito.colors.danger) }
             Text("Plancito ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall, color = Plancito.colors.textMuted)
         }
+    }
+}
+
+@Composable
+private fun SettingSwitch(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = Plancito.colors.textMuted)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
