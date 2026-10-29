@@ -35,7 +35,7 @@ import com.fdm.plancito.data.CATEGORIES
 import com.fdm.plancito.data.categoryInfo
 import com.fdm.plancito.ui.common.icon
 import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -46,6 +46,17 @@ import org.osmdroid.views.overlay.Marker
 
 /** [category] es el valor de la base ("restaurante", "bar"…): define el ícono del pin. */
 data class MapPin(val id: String, val lat: Double, val lng: Double, val category: String, val color: Color, val title: String)
+
+/**
+ * Mosaicos de CARTO (estilo Voyager, datos de OpenStreetMap). Los servidores de
+ * tile.openstreetmap.org bloquean (403) a las apps que no cumplen su política de uso,
+ * y el mapa quedaba gris; CARTO está pensado para usarse desde apps.
+ */
+private val TILES = XYTileSource(
+    "CartoVoyager", 0, 20, 256, ".png",
+    arrayOf("a", "b", "c", "d").map { "https://$it.basemaps.cartocdn.com/rastertiles/voyager/" }.toTypedArray(),
+    "© OpenStreetMap © CARTO",
+)
 
 /** Centro por defecto cuando todavía no hay nada marcado (Buenos Aires). */
 val DEFAULT_CENTER = GeoPoint(-34.6037, -58.3816)
@@ -99,7 +110,7 @@ fun OsmMap(
         modifier = modifier,
         factory = { ctx ->
             MapView(ctx).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
+                setTileSource(TILES)
                 setMultiTouchControls(interactive)
                 zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                 isTilesScaledToDpi = true
@@ -136,7 +147,7 @@ fun OsmMap(
                     }
                 })
             }
-            // La política de uso de OpenStreetMap pide mostrar la atribución.
+            // OpenStreetMap y CARTO piden mostrar la atribución.
             map.overlays.add(CopyrightOverlay(map.context).apply { setAlignRight(true) })
             map.invalidate()
 
